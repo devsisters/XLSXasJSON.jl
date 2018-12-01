@@ -1,18 +1,34 @@
 """
-    JSONWorkSheet
+What is the easiest way to organize and edit your Excel data?
+Lists of simple objects seem a natural fit for a row oriented sheets.
+Single objects with more complex structure seem more naturally presented as
+column oriented sheets.
+Doesn't really matter which orientation you use,
+the module allows you to speciy a row or column orientation;
+basically, where your keys are located: row 1 or column 1.
+
+** Keys and values **
+
+* Row or column 1 contains `JSONColumnType`
+* Remaining rows/columns contain values for those keys
+* Use `phones.type` for values to be stored as a Dict
+* Use `aliases[]` and seperate values by `a;b;c` for values to be stored as a Vector
 
 **Constructors**
 
 ```julia
-DataFrame(xlsxpath::String, sheet, jsonpath=nothing;)
+JSONWorksheet(xlsxpath::String, sheet, jsonpath=nothing)
+JSONWorksheet(xlsxpath::String, sheet, jsonpath=nothing;
+          start_line=1, row_oriented::Bool=false, compact_to_singleline::Bool=false)
 ```
 
 **Arguments**
 
-* `row_oriented` : true면 행으로 된 데이터, false면 열로 된 데이터
+* `xlsxpath` : full path to .xlsx or .xlsm file. .xls is not supported
+* `sheet` : Index number of sheet or Nmae of sheet
+* `row_oriented` : default is true for row oriendted data.
 * `start_line` : n번째 행부터 읽어온다.
-* `compact_to_singleline` : 모든 행을 첫줄에 Vector로 넣는다.
-데이터는 반드시 직사각형이어야 한다.
+* `compact_to_singleline` :
 
 """
 mutable struct JSONWorksheet <: AbstractDataFrame
@@ -28,12 +44,12 @@ function JSONWorksheet(data::DataFrame, xlsxpath, sheet, jsonpath)
     end
     JSONWorksheet(data, xlsxpath, jsonpath, Symbol(sheet))
 end
-function JSONWorksheet(arr::Array{T, 2}, xlsxpath, sheet, jsonpath) where T
+function JSONWorksheet(arr::Array{T}, xlsxpath, sheet, jsonpath) where T
     data = parse_special_dataframe(arr)
     JSONWorksheet(data, xlsxpath, sheet, jsonpath)
 end
 function JSONWorksheet(xf::XLSX.XLSXFile, sheet, jsonpath;
-                       row_oriented = true, start_line = 1, compact_to_singleline = false)
+                       start_line=1, row_oriented=true, compact_to_singleline=false)
     ws = isa(sheet, Symbol) ? xf[string(sheet)] : xf[sheet]
     sheet = ws.name
     # orientation 고려하여 범위내의 데이터 불러오기
@@ -83,15 +99,7 @@ function JSONWorkbook(xlsxpath, sheets; args...)
     index = DataFrames.Index(sheetnames.(v))
     JSONWorkbook(xf, v, index)
 end
-# 여러 시트를 합쳐서 하나의 워크북 구성
-function JSONWorkbook(sheets::Vector{JSONWorksheet})
-    xl = unique(xlsxpath.(sheet))
-    if length(xl) != 1
-        error("같은 파일만 워크북 생성 가능")
-    end
-    index = DataFrames.Index(sheet.(v))
-    JSONWorkbook(xl[1], sheets, index)
-end
+
 # fallback functions
 XLSX.isopen(jwb::JSONWorkbook) = isopen(jwb.package)
 XLSX.close(jwb::JSONWorkbook) = close(jwb.package)
@@ -128,11 +136,8 @@ function Base.show(io::IO, jwb::JSONWorkbook)
     end
 end
 
-
-"""
-    TODO: JSONColumnType 별로 함수 분리?
-"""
-function parse_special_dataframe(arr::Array{T, 2}) where T
+# needs better name
+function parse_special_dataframe(arr::Array{T}) where T
     parse_special_dataframe(string.(arr[1, :]), arr[2:end, :])
 end
 function parse_special_dataframe(cols, data)
@@ -180,19 +185,13 @@ function parse_special_dataframe(cols, data)
     return df
 end
 
-# AbstractDataFrame은 getproperty를 override하기 때문에 '.'으로 접근이 불가
 data(jws::JSONWorksheet) = getfield(jws, :data)
 xlsxpath(jws::JSONWorksheet) = getfield(jws, :xlsxpath)
 jsonpath(jws::JSONWorksheet) = getfield(jws, :jsonpath)
 sheetnames(jws::JSONWorksheet) = getfield(jws, :sheetname)
 
-##############################################################################
-##
 ## JSONWorksheet interface
-##
-##############################################################################
 DataFrames.index(jws::JSONWorksheet) = DataFrames.index(data(jws))
-
 DataFrames.nrow(jws::JSONWorksheet) = nrow(data(jws))
 DataFrames.ncol(jws::JSONWorksheet) = ncol(data(jws))
 
