@@ -20,7 +20,7 @@ function JSON.show_json(io::SC, s::CS, jws::JSONWorksheet)
     end
     JSON.end_array(io)
 end
-
+# removes indent for Vector
 function compact_show_json(io, s, x::Array{T}) where T
     JSON.begin_array(io)
     for elt in x
@@ -30,6 +30,7 @@ function compact_show_json(io, s, x::Array{T}) where T
     JSON.end_array(io)
 end
 
+# change function name to write?
 function save_json(jws::JSONWorksheet, filepath = nothing; indent = 2)
     if isa(filepath, Nothing)
         filepath = dirname(xlsxpath(jws))
