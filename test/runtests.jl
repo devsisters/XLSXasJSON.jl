@@ -88,3 +88,32 @@ end
     "Pweight":[1.006,0.81,0.699,0.621,0.621,0.48,0.423,0.34,0.312]}]
     """, "\n" => "")
 end
+
+@testset "XLSX Readng - nullhandling" begin
+    data_path = joinpath(@__DIR__, "../data/")
+    xf = joinpath(data_path, "othercase.xlsx")
+
+    a = JSONWorksheet(xf, "missing")
+    @test JSON.json(a) == replace("""[
+    {"Key":"SMITH","Data":{"A":"Pull","B":10},"AllNull":null},
+    {"Key":"JOHNSON","Data":{"A":"request","B":15},"AllNull":null},
+    {"Key":"NULLS","Data":{"A":"issue","B":null},"AllNull":null},
+    {"Key":"MILLER","Data":{"A":null,"B":35},"AllNull":null},
+    {"Key":"MICHEAL","Data":{"A":"after","B":50},"AllNull":null}]
+    """, "\n" => "")
+end
+
+@testset "XLSX Readng - WorkBook" begin
+    data_path = joinpath(@__DIR__, "../data/")
+    xf = joinpath(data_path, "othercase.xlsx")
+    jwb = JSONWorkbook(xf)
+
+    @test sheetnames(jwb) == [:compact, :missing]
+
+    @test  jwb[1][:] == JSONWorksheet(xf, 1)[:]
+    # @test  jwb[2][:] == JSONWorksheet(xf, 2)[:] cannot compare missing
+end
+
+@testset "JSON Writing" begin
+
+end

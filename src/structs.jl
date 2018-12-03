@@ -64,8 +64,9 @@ function JSONWorksheet(xf::XLSX.XLSXFile, sheet, jsonpath;
             end
             # missing row, col 제거
             dt[broadcast(i -> !all(ismissing.(dt[i, :])), 1:size(dt, 1)),
-               broadcast(j -> !all(ismissing.(dt[:, j])), 1:size(dt, 2))]
+               broadcast(j -> !ismissing(dt[1, j]), 1:size(dt, 2))]
         end
+
     if compact_to_singleline
         colnames = permutedims(ws[1, :])
         ws2 = broadcast(col -> [ws[2:end, col]], 1:size(ws, 2))
@@ -95,11 +96,21 @@ function JSONWorkbook(xlsxpath, sheets; args...)
         push!(v, JSONWorksheet(xf, s; args...))
     end
     close(xf)
-    # index id가 엑셀파일과 다르게 생성됨
+
     index = DataFrames.Index(sheetnames.(v))
     JSONWorkbook(xf, v, index)
 end
-
+function JSONWorkbook(xlsxpath; args...)
+    xf = XLSX.readxlsx(xlsxpath)
+    v = JSONWorksheet[]
+    for s in XLSX.sheetnames(xf)
+        push!(v, JSONWorksheet(xf, s; args...))
+    end
+    close(xf)
+    
+    index = DataFrames.Index(sheetnames.(v))
+    JSONWorkbook(xf, v, index)
+end
 # fallback functions
 XLSX.isopen(jwb::JSONWorkbook) = isopen(jwb.package)
 XLSX.close(jwb::JSONWorkbook) = close(jwb.package)

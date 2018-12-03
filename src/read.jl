@@ -3,7 +3,7 @@
 
 * Use `phones.type` for values to be stored as a Dict
 * Use `aliases[]` and seperate values by `a;b;c` for values to be stored as a Vector
-* Use `phones[1].type` for values to be stored as Vector{Dict} 
+* Use `phones[1].type` for values to be stored as Vector{Dict}
 
 For more detailed information, see the examples in README
 """
