@@ -30,20 +30,24 @@ function compact_show_json(io, s, x::Array{T}) where T
     JSON.end_array(io)
 end
 
-# change function name to write?
-function save_json(jws::JSONWorksheet, filepath = nothing; indent = 2)
-    if isa(filepath, Nothing)
-        filepath = dirname(xlsxpath(jws))
-    end
 
-    p = joinpath(filepath, jsonpath(jws))
+function write(jws::JSONWorksheet; kwargs...)
+    write(jsonpath(jws), jws; kwargs...)
+end
+function write(file::Union{String, IO}, jws::JSONWorksheet;
+               cols::Array{Symbol, 1}, indent = 2)
+    write(file,
+          JSONWorksheet(jws[cols], xlsxpath(jws), sheetnames(jws), jsonpath(jws));
+          indent = indent)
+end
+function write(file::Union{String, IO}, jws::JSONWorksheet; indent = 2)
     open(p, "w") do io
         write(io, JSON.json(jws, indent))
     end
-    @printf("   saved => \"%s\" \n", p)
 end
-function save_json(jwb::JSONWorkbook, filepath = nothing; args...)
+
+function write(jwb::JSONWorkbook; kwargs...)
     for s in jwb.sheets
-        save_json(s, filepath; args...)
+        write(s; kwargs...)
     end
 end
