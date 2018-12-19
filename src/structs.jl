@@ -34,6 +34,7 @@ JSONWorksheet(xlsxpath::String, sheet, jsonpath=nothing;
 mutable struct JSONWorksheet <: AbstractDataFrame
     data::DataFrame
     xlsxpath::AbstractString
+    # TODO: REMOVE jsonpath
     jsonpath::AbstractString
     sheetname::Symbol
 end
@@ -107,7 +108,7 @@ function JSONWorkbook(xlsxpath; args...)
         push!(v, JSONWorksheet(xf, s; args...))
     end
     close(xf)
-    
+
     index = DataFrames.Index(sheetnames.(v))
     JSONWorkbook(xf, v, index)
 end

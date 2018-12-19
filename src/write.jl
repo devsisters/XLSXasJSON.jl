@@ -31,20 +31,21 @@ function compact_show_json(io, s, x::Array{T}) where T
 end
 
 
+function write end
+function write(file::Union{String, IO}, jws::JSONWorksheet; indent = 2)
+    open(file, "w") do io
+        Base.write(io, JSON.json(jws, indent))
+    end
+end
 function write(jws::JSONWorksheet; kwargs...)
     write(jsonpath(jws), jws; kwargs...)
 end
-function write(file::Union{String, IO}, jws::JSONWorksheet;
-               cols::Array{Symbol, 1}, indent = 2)
+function write(file::Union{String, IO}, jws::JSONWorksheet, cols::Array{Symbol, 1}; kwargs...)
     write(file,
           JSONWorksheet(jws[cols], xlsxpath(jws), sheetnames(jws), jsonpath(jws));
-          indent = indent)
+          kwargs...)
 end
-function write(file::Union{String, IO}, jws::JSONWorksheet; indent = 2)
-    open(p, "w") do io
-        write(io, JSON.json(jws, indent))
-    end
-end
+
 
 function write(jwb::JSONWorkbook; kwargs...)
     for s in jwb.sheets

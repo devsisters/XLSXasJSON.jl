@@ -14,7 +14,6 @@ include("write.jl")
 
 export JSONWorkbook, JSONWorksheet,
        hassheet, sheetnames,
-       xlsxpath, jsonpath,
-       write
+       xlsxpath, jsonpath
 
 end
