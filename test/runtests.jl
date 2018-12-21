@@ -31,18 +31,17 @@ end
              "string" 100 "STRING" 1000.1;
              missing 200 200. 2000.1]
 
-    a = JSONWorksheet(data_basic, "","","")
+    a = JSONWorksheet(data_basic, "","")
     @test JSON.json(a) == """[{"base":"string"},{"base":100},{"base":100.1},{"base":null}]"""
-    b = JSONWorksheet(data_dict, "","","")
+    b = JSONWorksheet(data_dict, "","")
     @test JSON.json(b) == """[{"dict":{"A":100,"B":100.1}},{"dict":{"A":"string","B":null}}]"""
-    c = JSONWorksheet(data_array, "","","")
+    c = JSONWorksheet(data_array, "","")
     @test JSON.json(c) == """[{"Vec1":["a","b","c","d"],"Vec2":[500,600,700]},{"Vec1":[],"Vec2":[43,25]}]"""
-    d = JSONWorksheet(data_array_dict, "","","")
+    d = JSONWorksheet(data_array_dict, "","")
     @test JSON.json(d) == """[{"arr":[{"A":"string","B":100},{"A":"STRING","B":1000.1}]},{"arr":[{"B":200},{"A":200.0,"B":2000.1}]}]"""
 end
 
 @testset "XLSX Readng - row oriented" begin
-    data_path = joinpath(@__DIR__, "../data/")
     xf_roworiented = joinpath(data_path, "row-oriented.xlsx")
     a = JSONWorksheet(xf_roworiented, 1)
     @test JSON.json(a) == """[{"firstName":"Jihad","lastName":"Saladin","address":{"street":"12 Beaver Court","city":"Snowmass","state":"CO","zip":81615}},{"firstName":"Marcus","lastName":"Rivapoli","address":{"street":"16 Vail Rd","city":"Vail","state":"CO","zip":81657}}]"""
@@ -60,7 +59,6 @@ end
 end
 
 @testset "XLSX Readng - col oriented" begin
-    data_path = joinpath(@__DIR__, "../data/")
     xf_coloriented = joinpath(data_path, "col-oriented.xlsx")
 
     a = JSONWorksheet(xf_coloriented, 1; row_oriented=false)
@@ -79,7 +77,6 @@ end
 end
 
 @testset "XLSX Readng - compact" begin
-    data_path = joinpath(@__DIR__, "../data/")
     xf = joinpath(data_path, "othercase.xlsx")
 
     a = JSONWorksheet(xf, "compact"; compact_to_singleline = true)
@@ -90,7 +87,6 @@ end
 end
 
 @testset "XLSX Readng - nullhandling" begin
-    data_path = joinpath(@__DIR__, "../data/")
     xf = joinpath(data_path, "othercase.xlsx")
 
     a = JSONWorksheet(xf, "missing")
@@ -104,7 +100,6 @@ end
 end
 
 @testset "XLSX Readng - WorkBook" begin
-    data_path = joinpath(@__DIR__, "../data/")
     xf = joinpath(data_path, "othercase.xlsx")
     jwb = JSONWorkbook(xf)
 
@@ -114,6 +109,23 @@ end
     # @test  jwb[2][:] == JSONWorksheet(xf, 2)[:] cannot compare missing
 end
 
+# TODO: manual test works, but autotest fails, needs to check
 @testset "JSON Writing" begin
+    xf = joinpath(data_path, "othercase.xlsx")
+    jwb = JSONWorkbook(xf)
 
+    f1 = joinpath(@__DIR__, "s1.json")
+    f2 = joinpath(@__DIR__, "s2.json")
+
+    XLSXasJSON.write(f1, jwb[1])
+    XLSXasJSON.write(f2, jwb[2])
+
+    @test isfile(f1)
+    @test isa(JSON.parsefile(f1), Vector)
+
+    @test isfile(f2)
+    @test isa(JSON.parsefile(f2), Vector)
+
+    rm(f1)
+    rm(f2)
 end

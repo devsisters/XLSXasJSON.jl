@@ -17,8 +17,8 @@ basically, where your keys are located: row 1 or column 1.
 **Constructors**
 
 ```julia
-JSONWorksheet(xlsxpath::String, sheet, jsonpath=nothing)
-JSONWorksheet(xlsxpath::String, sheet, jsonpath=nothing;
+JSONWorksheet(xlsxpath::String, sheet)
+JSONWorksheet(xlsxpath::String, sheet;
           start_line=1, row_oriented::Bool=false, compact_to_singleline::Bool=false)
 ```
 
@@ -34,22 +34,17 @@ JSONWorksheet(xlsxpath::String, sheet, jsonpath=nothing;
 mutable struct JSONWorksheet <: AbstractDataFrame
     data::DataFrame
     xlsxpath::AbstractString
-    # TODO: REMOVE jsonpath
-    jsonpath::AbstractString
     sheetname::Symbol
 end
 
-function JSONWorksheet(data::DataFrame, xlsxpath, sheet, jsonpath)
-    if isa(jsonpath, Nothing)
-        jsonpath = replace(basename(xlsxpath), r"\.[^.]*" => "_$sheet.json")
-    end
-    JSONWorksheet(data, xlsxpath, jsonpath, Symbol(sheet))
+function JSONWorksheet(data::DataFrame, xlsxpath, sheet)
+    JSONWorksheet(data, xlsxpath, Symbol(sheet))
 end
-function JSONWorksheet(arr::Array{T}, xlsxpath, sheet, jsonpath) where T
+function JSONWorksheet(arr::Array{T}, xlsxpath, sheet) where T
     data = parse_special_dataframe(arr)
-    JSONWorksheet(data, xlsxpath, sheet, jsonpath)
+    JSONWorksheet(data, xlsxpath, sheet)
 end
-function JSONWorksheet(xf::XLSX.XLSXFile, sheet, jsonpath;
+function JSONWorksheet(xf::XLSX.XLSXFile, sheet;
                        start_line=1, row_oriented=true, compact_to_singleline=false)
     ws = isa(sheet, Symbol) ? xf[string(sheet)] : xf[sheet]
     sheet = ws.name
@@ -73,11 +68,11 @@ function JSONWorksheet(xf::XLSX.XLSXFile, sheet, jsonpath;
         ws2 = broadcast(col -> [ws[2:end, col]], 1:size(ws, 2))
         ws = [colnames; hcat(ws2...)]
     end
-    JSONWorksheet(ws, xf.filepath, sheet, jsonpath)
+    JSONWorksheet(ws, xf.filepath, sheet)
 end
-function JSONWorksheet(xlsxpath, sheet, jsonpath = nothing; args...)
+function JSONWorksheet(xlsxpath, sheet; args...)
     xf = XLSX.readxlsx(xlsxpath)
-    x = JSONWorksheet(xf, sheet, jsonpath; args...)
+    x = JSONWorksheet(xf, sheet; args...)
     close(xf)
     return x
 end
@@ -199,7 +194,6 @@ end
 
 data(jws::JSONWorksheet) = getfield(jws, :data)
 xlsxpath(jws::JSONWorksheet) = getfield(jws, :xlsxpath)
-jsonpath(jws::JSONWorksheet) = getfield(jws, :jsonpath)
 sheetnames(jws::JSONWorksheet) = getfield(jws, :sheetname)
 
 ## JSONWorksheet interface
@@ -214,12 +208,21 @@ function Base.getindex(jws::JSONWorksheet, rowinds::Any, colinds::Any)
     return getindex(data(jws), rowinds, colinds)
 end
 
+
+
+function Base.sort(jws::JSONWorksheet, kwargs...)
+    JSONWorksheet(sort(jws[:], kwargs...), xlsxpath(jws), sheetnames(jws))
+end
+function Base.sort!(jws::JSONWorksheet, kwargs...)
+    setfield!(jws, :data, sort(jws[:], kwargs...))
+end
+
 function Base.show(io::IO, x::JSONWorksheet)
     @printf(io, "[%s] sheet_name:%s \n", basename(xlsxpath(x)), sheetnames(x))
     show(io, data(x))
 end
-# OrderedDict 덮어씌웠는데 Dict랑 표현법이 아예 다른데 괜찮을지??
-# TODO: base/show.jl:73l 참조하여 수정
+# TODO: Need to change this fucntion to override only JSONWorksheet, not OrderedDict itself
+# see base/show.jl:73l
 function Base.show(io::IO, x::OrderedDict)
     for (i, (k, v)) in enumerate(x)
         print(io, "{", k, ": ")
