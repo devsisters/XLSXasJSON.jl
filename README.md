@@ -31,7 +31,7 @@ pkg> add https://github.com/devsisters/XLSXasJSON.jl
     # turns into json object
     JSON.json(a)
     # saves with indent
-    save_json(a, "row-oriented.json"; indent = 2)
+    XLSXasJSON.write("row-oriented_sheet1.json", a; indent = 2)
 ```
 
 
