@@ -11,7 +11,7 @@ const JSONColumnType = (
   (Vector{Dict},r"\[(\d+)\]\.(.+)$", x -> split(x, ".")), # abc[1].key
   (Dict,        r"\.(.+)",           x -> split(x, ".")), #abc.key
   (Vector{T} where T,
-       r"(\[(\D+)\]$|\[Float64\]$)", x -> replace(x, r"(\[.+\])$|(\[\])$" => "")), # abc[Type]
+       r"(\[(\D+)\]$)", x -> replace(x, r"(\[.+\])$|(\[\])$" => "")), # abc[Type]
   (Vector{Any}, r"(\[\])",           x -> replace(x, r"(\[.+\])$|(\[\])$" => ""))) # abc[]
 # (JSONGroup, r"({})",           x -> replace(x, r"({.+\})$|({})$" => ""))) # abc{}
 
@@ -23,6 +23,8 @@ function parse_keyname(key)
             # Statically typed Vector
             if typ == (Array{T, 1} where T)
                 x = match(reg, key).captures[2] |> Symbol
+                x == :Float && (x = :Float64) # should change regex to capture Float64
+
                 T = @eval Vector{$x}
             else
                 T = typ
