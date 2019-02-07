@@ -1,4 +1,11 @@
 """
+    Able to use other string as delimiter by changing values of `DELIM`
+
+push!(XLSXasJSON.DELIM, ",")  
+"""
+const DELIM = [";"]
+
+"""
 What is the easiest way to organize and edit your Excel data?
 Lists of simple objects seem a natural fit for a row oriented sheets.
 Single objects with more complex structure seem more naturally presented as
@@ -26,8 +33,8 @@ JSONWorksheet(xlsxpath::String, sheet;
 
 * `xlsxpath` : full path to .xlsx or .xlsm file. .xls is not supported
 * `sheet` : Index number of sheet or Nmae of sheet
-* `row_oriented` : default is true for row oriendted data.
-* `start_line` : n번째 행부터 읽어온다.
+* `row_oriented` : default is true for row oriendted data
+* `start_line` : ignore rows smaller than `start_line`
 * `compact_to_singleline` :
 
 """
@@ -48,7 +55,7 @@ function JSONWorksheet(xf::XLSX.XLSXFile, sheet;
                        start_line=1, row_oriented=true, compact_to_singleline=false)
     ws = isa(sheet, Symbol) ? xf[string(sheet)] : xf[sheet]
     sheet = ws.name
-    # orientation 고려하여 범위내의 데이터 불러오기
+    # col, row orientation handling
     ws = begin
             rg = XLSX.get_dimension(ws)
             if row_oriented
@@ -78,7 +85,7 @@ function JSONWorksheet(xlsxpath, sheet; args...)
 end
 """
     JSONWorkBook
-JSON <-> XLSX 변환을 위한 데이터 타입
+Preserves XLSX WorkBook data structure
 """
 mutable struct JSONWorkbook
     package::XLSX.XLSXFile
@@ -108,11 +115,6 @@ function JSONWorkbook(xlsxpath; args...)
     JSONWorkbook(xf, v, index)
 end
 # fallback functions
-XLSX.isopen(jwb::JSONWorkbook) = isopen(jwb.package)
-XLSX.close(jwb::JSONWorkbook) = close(jwb.package)
-
-Base.length(jwb::JSONWorkbook) = length(jwb.sheets)
-
 hassheet(jwb::JSONWorkbook, s::Symbol) = haskey(jwb.sheetindex, s)
 getsheet(jwb::JSONWorkbook, i) = jwb.sheets[i]
 getsheet(jwb::JSONWorkbook, ind::Symbol) = getsheet(jwb, jwb.sheetindex[ind])
@@ -120,8 +122,17 @@ sheetnames(jwb::JSONWorkbook) = names(jwb.sheetindex)
 
 xlsxpath(jwb::JSONWorkbook) = jwb.package.filepath
 
+XLSX.isopen(jwb::JSONWorkbook) = isopen(jwb.package)
+XLSX.close(jwb::JSONWorkbook) = close(jwb.package)
+
+Base.length(jwb::JSONWorkbook) = length(jwb.sheets)
+Base.lastindex(jwb::JSONWorkbook) = length(jwb.sheets)
+
 Base.getindex(jwb::JSONWorkbook, i::Integer) = getsheet(jwb, i)
 Base.getindex(jwb::JSONWorkbook, s::Symbol) = getsheet(jwb, s)
+Base.getindex(jwb::JSONWorkbook, i::UnitRange) = getsheet(jwb, i)
+
+Base.setindex!(jwb::JSONWorkbook, x, i1::Int) = setindex!(jwb.sheets, x, i1)
 
 
 Base.iterate(jwb::JSONWorkbook) = iterate(jwb, 1)
@@ -145,48 +156,53 @@ end
 
 # needs better name
 function parse_special_dataframe(arr::Array{T}) where T
+    missing_col = ismissing.(arr[1, :])
+    arr = arr[:, broadcast(!, missing_col)]
+
+    missing_row = broadcast(r -> all(ismissing.(arr[r, :])), 1:size(arr, 1))
+    arr = arr[broadcast(!, missing_row), :]
+
     parse_special_dataframe(string.(arr[1, :]), arr[2:end, :])
 end
-function parse_special_dataframe(cols, data)
-    df = DataFrame()
-    for (i, x) in enumerate(cols)
-        (T, key) = parse_keyname(x)
-        if T <: Dict
-            k = Symbol.(key)
-            if !haskey(df, k[1])
-                df[k[1]] = map(x -> OrderedDict(), 1:size(data, 1))
-            end
-            map(row -> df[row, k[1]][k[2]] = data[row, i], 1:size(data, 1))
-        elseif T <: Array{Dict, 1}
-            k = Symbol(split(key[1], "[")[1])
-            if !haskey(df, k)
-                df[k] = map(x -> [OrderedDict()], 1:size(data, 1))
-            end
+function parse_special_dataframe(colnames, data)
+    col_infos, d2 = assign_jsontype(colnames)
 
-            idx = match(r"\[(\d+)\]", key[1]) |> x -> parse(UInt8, x.captures[1])
-            k2 = Symbol(key[2])
-            for row in 1:size(data, 1)
-                if !ismissing(data[row, i])
-                    _v = df[row, k]
-                    if length(_v) < idx +1
-                        push!(_v, OrderedDict())
-                    end
-                    _v[end][k2] = data[row, i]
-                end
+    # init DataFrame
+    template = DataFrame()
+    for el in d2
+        k = Symbol(el[1])
+        template[k] = if ismissing(el[2])
+                    Any[el[2]]
+            else 
+                    [el[2]]
             end
-
-        elseif T <: Array{T, 1} where T
-            x = broadcast(x -> (ismissing(x) || isa(x, Real)) ? x :
-                               filter(!isempty, split(x, ";")), data[:, i])
-            if T <: Array{T, 1} where T <: Real
+    end
+    df = deepcopy(template)
+    [append!(df, deepcopy(template)) for i in 2:size(data, 1)]
+    
+    # fill DataFrame
+    for i in 1:size(data, 1), j in 1:size(data, 2)
+        x = data[i, j]
+        T2, colinfo =  col_infos[j]    
+        
+        if T2 <: Dict
+            df[i, Symbol(colinfo[1])][colinfo[2]] = x
+    
+        elseif T2 <: Array{Dict, 1}
+            df[i, Symbol(colinfo[1])][colinfo[2]][colinfo[3]] = x
+    
+        elseif T2 <: Array{T3, 1} where T3
+            if !ismissing(x) && !isa(x, Real)
+                x = filter(!isempty, split(x, Regex(join(XLSXasJSON.DELIM, "|"))))
+            end
+            if T2 <: Array{T3, 1} where T3 <: Real
                 if !ismissing(x)
-                    x = broadcast(x -> (ismissing(x) || isa(x, Real)) ? x :
-                                        parse.(eltype(T), x), x)
+                    x = broadcast(x -> (ismissing(x) || isa(x, Real)) ? x : parse.(eltype(T2), x), x)
                 end
             end
-            df[Symbol(key)] = x
+            df[i, Symbol(colinfo)] = x
         else
-            df[Symbol(key)] = data[:, i]
+            df[i, Symbol(colinfo)] = x
         end
     end
     return df
@@ -207,7 +223,9 @@ end
 function Base.getindex(jws::JSONWorksheet, rowinds::Any, colinds::Any)
     return getindex(data(jws), rowinds, colinds)
 end
-
+function Base.setindex!(jws::JSONWorksheet, v, col_ind)
+    setindex!(data(jws), v, col_ind)
+end
 
 
 function Base.sort(jws::JSONWorksheet, kwargs...)
@@ -230,3 +248,5 @@ function Base.show(io::IO, x::OrderedDict)
         i < length(x) && print(io, ", ")
     end
 end
+
+
