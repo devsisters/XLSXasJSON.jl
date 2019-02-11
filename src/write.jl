@@ -12,7 +12,7 @@ function JSON.show_json(io::SC, s::CS, jws::JSONWorksheet)
             elseif isa(el[2], Array{T} where T)
                 JSON.show_key(io, el[1])
                 JSON.indent(io)
-                compact_show_json(io, s, el[2]) 
+                compact_show_json(io, s, el[2])
             else
                 JSON.show_pair(io, s, el)
             end
@@ -27,7 +27,7 @@ function compact_show_json(io, s, x::Array{T}) where T
     JSON.begin_array(io)
     for elt in x
         JSON.delimit(io)
-        if isa(elt, Array{T} where T)
+        if isa(elt, Array{T2} where T2)
             compact_show_json(io, s, elt)
         else
             JSON.show_json(io, s, elt)
