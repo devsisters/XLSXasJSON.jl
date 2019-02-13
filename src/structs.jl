@@ -1,7 +1,7 @@
 """
     Able to use other string as delimiter by changing values of `DELIM`
 
-push!(XLSXasJSON.DELIM, ",")  
+push!(XLSXasJSON.DELIM, ",")
 """
 const DELIM = [";"]
 
@@ -43,7 +43,6 @@ mutable struct JSONWorksheet <: AbstractDataFrame
     xlsxpath::AbstractString
     sheetname::Symbol
 end
-
 function JSONWorksheet(data::DataFrame, xlsxpath, sheet)
     JSONWorksheet(data, xlsxpath, Symbol(sheet))
 end
@@ -55,7 +54,7 @@ function JSONWorksheet(xf::XLSX.XLSXFile, sheet;
                        start_line=1, row_oriented=true, compact_to_singleline=false)
     ws = isa(sheet, Symbol) ? xf[string(sheet)] : xf[sheet]
     sheet = ws.name
-    # col, row orientation handling
+    # orientation handling
     ws = begin
             rg = XLSX.get_dimension(ws)
             if row_oriented
@@ -65,7 +64,6 @@ function JSONWorksheet(xf::XLSX.XLSXFile, sheet;
                 rg = XLSX.CellRange(XLSX.CellRef(rg.start.row_number, start_line), rg.stop)
                 dt = permutedims(ws[rg])
             end
-            # missing row, col 제거
             dt[broadcast(i -> !all(ismissing.(dt[i, :])), 1:size(dt, 1)),
                broadcast(j -> !ismissing(dt[1, j]), 1:size(dt, 2))]
         end
@@ -134,6 +132,15 @@ Base.getindex(jwb::JSONWorkbook, i::UnitRange) = getsheet(jwb, i)
 
 Base.setindex!(jwb::JSONWorkbook, x, i1::Int) = setindex!(jwb.sheets, x, i1)
 
+function Base.deleteat!(jwb::JSONWorkbook, i::Integer)
+    deleteat!(getfield(jwb, :sheets), i)
+    setfield!(jwb, :sheetindex, DataFrames.Index(sheetnames.(getfield(jwb, :sheets))))
+    jwb
+end
+function Base.deleteat!(jwb::JSONWorkbook, sheet::Symbol)
+    i = getfield(jwb, :sheetindex)[sheet]
+    deleteat!(jwb, i)
+end
 
 Base.iterate(jwb::JSONWorkbook) = iterate(jwb, 1)
 function Base.iterate(jwb::JSONWorkbook, st)
@@ -144,7 +151,7 @@ end
 function Base.show(io::IO, jwb::JSONWorkbook)
     wb = jwb.package.workbook
     print(io, "XLSXFile(\"$(basename(jwb.package.filepath))\") ",
-              "containing $(XLSX.sheetcount(wb)) Worksheets\n")
+              "containing $(length(jwb)) Worksheets\n")
     @printf(io, "%6s %-15s\n", "index", "name")
     println(io, "-"^(6+1+15+1))
 
@@ -173,24 +180,24 @@ function parse_special_dataframe(colnames, data)
         k = Symbol(el[1])
         template[k] = if ismissing(el[2])
                     Any[el[2]]
-            else 
+            else
                     [el[2]]
             end
     end
     df = deepcopy(template)
     [append!(df, deepcopy(template)) for i in 2:size(data, 1)]
-    
+
     # fill DataFrame
     for i in 1:size(data, 1), j in 1:size(data, 2)
         x = data[i, j]
-        T2, colinfo =  col_infos[j]    
-        
+        T2, colinfo =  col_infos[j]
+
         if T2 <: Dict
             df[i, Symbol(colinfo[1])][colinfo[2]] = x
-    
+
         elseif T2 <: Array{Dict, 1}
             df[i, Symbol(colinfo[1])][colinfo[2]][colinfo[3]] = x
-    
+
         elseif T2 <: Array{T3, 1} where T3
             if !ismissing(x) && !isa(x, Real)
                 x = filter(!isempty, split(x, Regex(join(XLSXasJSON.DELIM, "|"))))
@@ -248,5 +255,3 @@ function Base.show(io::IO, x::OrderedDict)
         i < length(x) && print(io, ", ")
     end
 end
-
-
