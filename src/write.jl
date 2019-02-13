@@ -35,12 +35,20 @@ function compact_show_json(io, s, x::Array{T}) where T
     end
     JSON.end_array(io)
 end
+function dropnull(s)
+    replace(s, r"(\"[\w]*\":null,)|(,?\"[\w]*\":null)" => "")
+end
 
 
 function write end
-function write(file::Union{String, IO}, jws::JSONWorksheet; indent = 2)
+function write(file::Union{String, IO}, jws::JSONWorksheet; indent = 2, drop_null = false)
     open(file, "w") do io
-        Base.write(io, JSON.json(jws, indent))
+        data = JSON.json(jws, indent)
+        if drop_null
+            data = dropnull(data)
+        end
+
+        Base.write(io, data)
     end
 end
 function write(file::Union{String, IO}, jws::JSONWorksheet, cols::Array{Symbol, 1}; kwargs...)

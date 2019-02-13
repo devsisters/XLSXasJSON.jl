@@ -2,8 +2,8 @@ using Test
 using XLSXasJSON
 using JSON
 
-# data_path = joinpath(@__DIR__, "..", "data")
-data_path = joinpath(@__DIR__, "data")
+data_path = joinpath(@__DIR__, "..", "data")
+# data_path = joinpath(@__DIR__, "data")
 
 @testset "Colname Determine" begin
     @test XLSXasJSON.assign_jsontype("BasicJSONData") == Any
@@ -49,7 +49,7 @@ end
     @test JSON.json(b) == """[{"firstName":"Max","lastName":"Irwin","address":{"street":"123 Fake Street","city":"Rochester","state":"NY","zip":99999}}]"""
     c = JSONWorksheet(xf_roworiented, 3)
     @test JSON.json(c) == replace("""
-    [{"firstName":"Jihad","address":{"state":"CO","zip":81615},"petlist":["cat","dog","horse"],"phones":[{"type":"home","number":"123.456.7890"},{"type":"work","number":"098.765.4321"}]},{"firstName":"Marcus","address":{"state":"CO","zip":81657},"petlist":["rat","goblin"],"phones":[{"type":"home","number":"123.456.7891"},{"type":"work","number":"098.765.4322"}]},{"firstName":"Max","address":{"state":"NY","zip":99999},"petlist":["cricket"],"phones":[{"type":"mars","number":"987.654.321"},{"type":"moon","number":"555.451.1234"}]}]""", 
+    [{"firstName":"Jihad","address":{"state":"CO","zip":81615},"petlist":["cat","dog","horse"],"phones":[{"type":"home","number":"123.456.7890"},{"type":"work","number":"098.765.4321"}]},{"firstName":"Marcus","address":{"state":"CO","zip":81657},"petlist":["rat","goblin"],"phones":[{"type":"home","number":"123.456.7891"},{"type":"work","number":"098.765.4322"}]},{"firstName":"Max","address":{"state":"NY","zip":99999},"petlist":["cricket"],"phones":[{"type":"mars","number":"987.654.321"},{"type":"moon","number":"555.451.1234"}]}]""",
     "\n" => "")
 end
 
@@ -75,8 +75,11 @@ end
 @testset "XLSX Readng - nullhandling" begin
     xf = joinpath(data_path, "othercase.xlsx")
 
-    a = JSONWorksheet(xf, "missing")
-    @test JSON.json(a) == replace("""[{"Key":"SMITH","Data":{"A":"Pull","B":10},"AllNull":null},{"Key":"JOHNSON","Data":{"A":"request","B":15},"AllNull":null},{"Key":"NULLS","Data":{"A":"issue","B":null},"AllNull":null},{"Key":"MILLER","Data":{"A":null,"B":35},"AllNull":null},{"Key":"MICHEAL","Data":{"A":"after","B":50},"AllNull":null}]""", "\n" => "")
+    a = JSONWorksheet(xf, "missing"; show_null = false)
+    data = JSON.json(a)
+    @test data == """[{"Key":"SMITH","Data":{"A":"Pull","B":10},"AllNull":null},{"Key":"JOHNSON","Data":{"A":"request","B":15},"AllNull":null},{"Key":"NULLS","Data":{"A":"issue","B":null},"AllNull":null},{"Key":"MILLER","Data":{"A":null,"B":35},"AllNull":null},{"Key":"MICHEAL","Data":{"A":"after","B":50},"AllNull":null}]"""
+
+    @test dropnull(data) == """[{"Key":"SMITH","Data":{"A":"Pull","B":10}},{"Key":"JOHNSON","Data":{"A":"request","B":15}},{"Key":"NULLS","Data":{"A":"issue"}},{"Key":"MILLER","Data":{"B":35}},{"Key":"MICHEAL","Data":{"A":"after","B":50}}]"""
 end
 
 @testset "XLSX Readng - add new DELIM" begin
@@ -93,6 +96,15 @@ end
     @test JSON.json(a) == """[{"DelimThis":["one","two","three"]},{"DelimThis":["one","two","three"]}]"""
 end
 
+@testset "XLSX Readng - deleteat! Worksheet" begin
+    xf = joinpath(data_path, "othercase.xlsx")
+
+    a = JSONWorkbook(xf)
+    @test length(a) == 2
+    deleteat!(a, :missing)
+    @test length(a) == 1
+    @test_throws ArgumentError a[:missing]
+end
 
 @testset "XLSX Readng - WorkBook" begin
     xf = joinpath(data_path, "othercase.xlsx")
