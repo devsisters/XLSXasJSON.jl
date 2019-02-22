@@ -90,27 +90,40 @@ mutable struct JSONWorkbook
     sheets::Vector{JSONWorksheet}
     sheetindex::DataFrames.Index
 end
-function JSONWorkbook(xlsxpath, sheets; args...)
-    xf = XLSX.readxlsx(xlsxpath)
-    v = JSONWorksheet[]
-    for s in sheets
-        push!(v, JSONWorksheet(xf, s; args...))
-    end
-    close(xf)
 
+function JSONWorkbook(xf::XLSX.XLSXFile, v::Vector{JSONWorksheet})
     index = DataFrames.Index(sheetnames.(v))
     JSONWorkbook(xf, v, index)
 end
-function JSONWorkbook(xlsxpath; args...)
+function JSONWorkbook(xlsxpath, sheets; kwargs...)
     xf = XLSX.readxlsx(xlsxpath)
-    v = JSONWorksheet[]
-    for s in XLSX.sheetnames(xf)
-        push!(v, JSONWorksheet(xf, s; args...))
+    JSONWorkbook(xf, sheets; kwargs...)
+end
+function JSONWorkbook(xlsxpath; kwargs...)
+    xf = XLSX.readxlsx(xlsxpath)
+    JSONWorkbook(xf; kwargs...)
+end
+# same kwargs for all sheets
+function JSONWorkbook(xf::XLSX.XLSXFile, sheets = XLSX.sheetnames(xf); kwargs...)
+    v = Array{JSONWorksheet, 1}(undef, length(sheets))
+    for (i, s) in enumerate(sheets)
+        v[i] = JSONWorksheet(xf, s; kwargs...)
     end
     close(xf)
 
-    index = DataFrames.Index(sheetnames.(v))
-    JSONWorkbook(xf, v, index)
+    JSONWorkbook(xf, v)
+end
+# Different Kwargs per sheet
+function JSONWorkbook(xlsxpath::AbstractString, sheets, kwargs_per_sheet::Dict)
+    xf = XLSX.readxlsx(xlsxpath)
+
+    v = Array{JSONWorksheet, 1}(undef, length(sheets))
+    for (i, s) in enumerate(sheets)
+        v[i] = JSONWorksheet(xf, s; kwargs_per_sheet[s]...)
+    end
+    close(xf)
+
+    JSONWorkbook(xf, v)
 end
 # fallback functions
 hassheet(jwb::JSONWorkbook, s::Symbol) = haskey(jwb.sheetindex, s)

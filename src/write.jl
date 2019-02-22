@@ -6,6 +6,7 @@ function JSON.show_json(io::SC, s::CS, jws::JSONWorksheet)
     for (i, row) in enumerate(eachrow(jws))
         JSON.indent(io)
         JSON.begin_object(io)
+
         for el in pairs(row)
             if isa(el[2], Array{T} where T <: AbstractDict)
                 JSON.show_pair(io, s, el)

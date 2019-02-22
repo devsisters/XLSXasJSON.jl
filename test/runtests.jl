@@ -75,7 +75,7 @@ end
 @testset "XLSX Readng - nullhandling" begin
     xf = joinpath(data_path, "othercase.xlsx")
 
-    a = JSONWorksheet(xf, "missing"; show_null = false)
+    a = JSONWorksheet(xf, "missing")
     data = JSON.json(a)
     @test data == """[{"Key":"SMITH","Data":{"A":"Pull","B":10},"AllNull":null},{"Key":"JOHNSON","Data":{"A":"request","B":15},"AllNull":null},{"Key":"NULLS","Data":{"A":"issue","B":null},"AllNull":null},{"Key":"MILLER","Data":{"A":null,"B":35},"AllNull":null},{"Key":"MICHEAL","Data":{"A":"after","B":50},"AllNull":null}]"""
 
