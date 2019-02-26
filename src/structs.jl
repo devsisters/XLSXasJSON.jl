@@ -67,6 +67,7 @@ function JSONWorksheet(xf::XLSX.XLSXFile, sheet;
             dt[broadcast(i -> !all(ismissing.(dt[i, :])), 1:size(dt, 1)),
                broadcast(j -> !ismissing(dt[1, j]), 1:size(dt, 2))]
         end
+    @assert !isempty(ws) "$(sheet)!$start_line:$start_line does not contains any data, try change 'start_line=$start_line'"
 
     if compact_to_singleline
         colnames = permutedims(ws[1, :])
