@@ -83,21 +83,21 @@ end
 end
 
 @testset "XLSX Readng - add new DELIM" begin
-    XLSXasJSON.DELIM = r";|,"
-
     data_basic = ["DelimThis[]", "one;two;three", "one,two,three"]
-
-
     a = JSONWorksheet(data_basic, "","")
+
+    @test XLSXasJSON.DELIM == [";"]
     @test JSON.json(a) == """[{"DelimThis":["one","two","three"]},{"DelimThis":["one,two,three"]}]"""
 
     push!(XLSXasJSON.DELIM, ",")
+    @test XLSXasJSON.DELIM == [";", ","]
+
     a = JSONWorksheet(data_basic, "","")
     @test JSON.json(a) == """[{"DelimThis":["one","two","three"]},{"DelimThis":["one","two","three"]}]"""
 end
 
 @testset "XLSX Readng - deleteat! Worksheet" begin
-    xf = joinpath(data_path, "othercase.xlsx")
+    xf = joinpath(data_path, "col-oriented.xlsx")
 
     a = JSONWorkbook(xf)
     @test length(a) == 2
@@ -106,14 +106,27 @@ end
     @test_throws ArgumentError a[:missing]
 end
 
+@testset "XLSX Readng - Asserts" begin
+    xf = joinpath(data_path, "assert.xlsx")
+    @test_throws AssertionError JSONWorksheet(xf, "duplicate")
+
+    @test_throws AssertionError JSONWorksheet(xf, "start_line")
+    @test_throws AssertionError JSONWorksheet(xf, "empty")
+end
+
+
+
+
+
+
+
+
+
+
 @testset "XLSX Readng - WorkBook" begin
     xf = joinpath(data_path, "othercase.xlsx")
     jwb = JSONWorkbook(xf)
 
-    @test sheetnames(jwb) == [:compact, :missing]
-
-    @test  jwb[1][:] == JSONWorksheet(xf, 1)[:]
-    # @test  jwb[2][:] == JSONWorksheet(xf, 2)[:] cannot compare missing
 end
 
 # TODO: manual test works, but autotest fails, needs to check

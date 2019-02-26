@@ -186,6 +186,8 @@ function parse_special_dataframe(arr::Array{T}) where T
     parse_special_dataframe(string.(arr[1, :]), arr[2:end, :])
 end
 function parse_special_dataframe(colnames, data)
+    @assert allunique(colnames) "There are duplicated column name\n $colnames"
+
     col_infos, d2 = assign_jsontype(colnames)
 
     # init DataFrame
