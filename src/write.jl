@@ -11,9 +11,9 @@ function JSON.show_json(io::SC, s::CS, jws::JSONWorksheet)
             if isa(el[2], Array{T} where T <: AbstractDict)
                 tmp = el[2]
                 for (i, x) in enumerate(tmp)
-                    x2 = filter(x -> !ismissing(x[2]), x)
-                    tmp[i] = filter(x -> length(x) > 0, x2)
+                    tmp[i] = filter(x -> !ismissing(x[2]), x)
                 end
+                tmp = filter(x -> length(x) > 0, tmp)
                 JSON.show_pair(io, s, Pair(el[1], tmp))
             elseif isa(el[2], Array{T} where T)
                 JSON.show_key(io, el[1])
