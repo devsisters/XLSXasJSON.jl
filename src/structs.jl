@@ -217,6 +217,7 @@ function parse_special_dataframe(colnames, data)
         elseif T2 <: Array{T3, 1} where T3
             if !ismissing(x) && !isa(x, Real)
                 x = filter(!isempty, split(x, Regex(join(XLSXasJSON.DELIM, "|"))))
+                x = strip.(x) 
             end
             if T2 <: Array{T3, 1} where T3 <: Real
                 if !ismissing(x)
