@@ -189,16 +189,15 @@ function parse_special_dataframe(colnames, data)
     @assert allunique(colnames) "There are duplicated column name\n $colnames"
 
     col_infos, d2 = assign_jsontype(colnames)
-
     # init DataFrame
     template = DataFrame()
     for el in d2
         k = Symbol(el[1])
         template[k] = if ismissing(el[2])
                     Any[el[2]]
-            else
+                else
                     [el[2]]
-            end
+                end
     end
     df = deepcopy(template)
     [append!(df, deepcopy(template)) for i in 2:size(data, 1)]
@@ -212,12 +211,18 @@ function parse_special_dataframe(colnames, data)
             df[i, Symbol(colinfo[1])][colinfo[2]] = x
 
         elseif T2 <: Array{Dict, 1}
-            df[i, Symbol(colinfo[1])][colinfo[2]][colinfo[3]] = x
+            tmp_holder = df[i, Symbol(colinfo[1])]
+            if !ismissing(x)
+                if length(tmp_holder) < colinfo[2]
+                    push!(tmp_holder, OrderedDict())
+                end
+                tmp_holder[colinfo[2]][colinfo[3]] = x
+            end
 
         elseif T2 <: Array{T3, 1} where T3
             if !ismissing(x) && !isa(x, Real)
                 x = filter(!isempty, split(x, Regex(join(XLSXasJSON.DELIM, "|"))))
-                x = strip.(x) 
+                x = strip.(x) #NOTE 이거 버그 소지 있음
             end
             if T2 <: Array{T3, 1} where T3 <: Real
                 if !ismissing(x)

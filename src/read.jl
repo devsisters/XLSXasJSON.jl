@@ -54,18 +54,13 @@ function assign_jsontype(colnames::Array{T, 1}) where T
             end
         elseif T2 <: Array{Dict, 1}
             kk = split(x, ".")
-            index = match(r"(\[(\d+)\])", kk[1]).captures[2] |> x -> parse(Int, x) +1 
+            index = match(r"(\[(\d+)\])", kk[1]).captures[2] |> x -> parse(Int, x) +1
 
             kk[1] = replace(kk[1], r"(\[.+\])" => "")
             if !haskey(container, kk[1])
                 container[kk[1]] = OrderedDict[]
             end
-            
-            if length(container[kk[1]]) < index
-                push!(container[kk[1]], OrderedDict{String, Any}(kk[2] => missing))
-            else
-                container[kk[1]][index][kk[2]] = missing
-            end
+
             kk = [kk[1], index, kk[2]]
 
         elseif T2 <: Array{T3, 1} where T3
@@ -74,7 +69,7 @@ function assign_jsontype(colnames::Array{T, 1}) where T
         else
             kk = x
             container[kk] = missing
-        end 
+        end
         d[i] = (T2, kk)
     end
 
