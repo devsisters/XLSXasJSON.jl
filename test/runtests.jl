@@ -31,13 +31,13 @@ end
              missing 200 200. 2000.1]
 
     a = JSONWorksheet(data_basic, "","")
-    @test JSON.json(a) == """[{"base":"string"},{"base":100},{"base":100.1},{"base":null}]"""
+    @test JSON.json(a) == """[{"base":"string"},{"base":100},{"base":100.1}]"""
     b = JSONWorksheet(data_dict, "","")
     @test JSON.json(b) == """[{"dict":{"A":100,"B":100.1}},{"dict":{"A":"string","B":null}}]"""
     c = JSONWorksheet(data_array, "","")
     @test JSON.json(c) == """[{"Vec1":["a","b","c","d"],"Vec2":[500,600,700]},{"Vec1":[],"Vec2":[43,25]}]"""
     d = JSONWorksheet(data_array_dict, "","")
-    @test JSON.json(d) == """[{"arr":[{"A":"string","B":100},{"A":"STRING","B":1000.1}]},{"arr":[{"A":null,"B":200},{"A":200.0,"B":2000.1}]}]"""
+    @test JSON.json(d) == """[{"arr":[{"A":"string","B":100},{"A":"STRING","B":1000.1}]},{"arr":[{"B":200},{"A":200.0,"B":2000.1}]}]"""
 end
 
 @testset "XLSX Readng - row oriented" begin
@@ -72,6 +72,13 @@ end
     @test JSON.json(a) == """[{"Name":["SMITH","JOHNSON","WILLIAMS","JONES","BROWN","DAVIS","MILLER","WILSON","MOORE"],"Pweight":[1.006,0.81,0.699,0.621,0.621,0.48,0.423,0.34,0.312]}]"""
 end
 
+@testset "XLSX Readng - compact vector" begin
+    xf = joinpath(data_path, "othercase.xlsx")
+
+    a = JSONWorksheet(xf, "compactvector"; compact_to_singleline = true)
+    @test JSON.json(a) == """[{"vec":[[1,5,1],[2,5,1],[3],[4,3,1],[5,1,2,5,1],[6,54,5]],"vec2":[["a","b"],["b","c"],["c","d"],["d","e","f"],["e","g"],["f","g"]]}]"""
+end
+
 @testset "XLSX Readng - nullhandling" begin
     xf = joinpath(data_path, "othercase.xlsx")
 
@@ -101,9 +108,9 @@ end
 
     a = JSONWorkbook(xf)
     @test length(a) == 2
-    deleteat!(a, :missing)
+    deleteat!(a, :Sheet1)
     @test length(a) == 1
-    @test_throws ArgumentError a[:missing]
+    @test_throws ArgumentError a[:Sheet1]
 end
 
 @testset "XLSX Readng - Asserts" begin
@@ -116,17 +123,10 @@ end
 
 
 
-
-
-
-
-
-
-
+########### TODO
 @testset "XLSX Readng - WorkBook" begin
     xf = joinpath(data_path, "othercase.xlsx")
     jwb = JSONWorkbook(xf)
-
 end
 
 # TODO: manual test works, but autotest fails, needs to check

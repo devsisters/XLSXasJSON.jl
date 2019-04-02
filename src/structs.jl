@@ -46,12 +46,19 @@ end
 function JSONWorksheet(data::DataFrame, xlsxpath, sheet)
     JSONWorksheet(data, xlsxpath, Symbol(sheet))
 end
-function JSONWorksheet(arr::Array{T}, xlsxpath, sheet) where T
+function JSONWorksheet(arr::Array{T}, xlsxpath, sheet, compact_to_singleline) where T
     data = parse_special_dataframe(arr)
+    if compact_to_singleline
+        df = DataFrame()
+        for col in names(data)
+            df[col] = [data[col]]
+        end
+        data = df
+    end
     JSONWorksheet(data, xlsxpath, sheet)
 end
 function JSONWorksheet(xf::XLSX.XLSXFile, sheet;
-                       start_line=1, row_oriented=true, compact_to_singleline=false)
+                       start_line=1, row_oriented=true, compact_to_singleline = false)
     ws = isa(sheet, Symbol) ? xf[string(sheet)] : xf[sheet]
     sheet = ws.name
     # orientation handling
@@ -69,16 +76,11 @@ function JSONWorksheet(xf::XLSX.XLSXFile, sheet;
         end
     @assert !isempty(ws) "$(sheet)!$start_line:$start_line does not contains any data, try change 'start_line=$start_line'"
 
-    if compact_to_singleline
-        colnames = permutedims(ws[1, :])
-        ws2 = broadcast(col -> [ws[2:end, col]], 1:size(ws, 2))
-        ws = [colnames; hcat(ws2...)]
-    end
-    JSONWorksheet(ws, xf.filepath, sheet)
+    JSONWorksheet(ws, xf.filepath, sheet, compact_to_singleline)
 end
-function JSONWorksheet(xlsxpath, sheet; args...)
+function JSONWorksheet(xlsxpath, sheet; kwargs...)
     xf = XLSX.readxlsx(xlsxpath)
-    x = JSONWorksheet(xf, sheet; args...)
+    x = JSONWorksheet(xf, sheet; kwargs...)
     close(xf)
     return x
 end
