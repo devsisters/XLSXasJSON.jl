@@ -46,7 +46,7 @@ end
 function JSONWorksheet(data::DataFrame, xlsxpath, sheet)
     JSONWorksheet(data, xlsxpath, Symbol(sheet))
 end
-function JSONWorksheet(arr::Array{T}, xlsxpath, sheet, compact_to_singleline) where T
+function JSONWorksheet(arr::Array{T}, xlsxpath, sheet, compact_to_singleline = false) where T
     data = parse_special_dataframe(arr)
     if compact_to_singleline
         df = DataFrame()
@@ -257,7 +257,6 @@ end
 function Base.setindex!(jws::JSONWorksheet, v, col_ind)
     setindex!(data(jws), v, col_ind)
 end
-
 
 function Base.sort(jws::JSONWorksheet, kwargs...)
     JSONWorksheet(sort(jws[:], kwargs...), xlsxpath(jws), sheetnames(jws))
