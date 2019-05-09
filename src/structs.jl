@@ -131,7 +131,7 @@ end
 # fallback functions
 hassheet(jwb::JSONWorkbook, s::Symbol) = haskey(jwb.sheetindex, s)
 getsheet(jwb::JSONWorkbook, i) = jwb.sheets[i]
-getsheet(jwb::JSONWorkbook, ind::Symbol) = getsheet(jwb, jwb.sheetindex[ind])
+getsheet(jwb::JSONWorkbook, s::Symbol) = getsheet(jwb, jwb.sheetindex[s])
 sheetnames(jwb::JSONWorkbook) = names(jwb.sheetindex)
 
 xlsxpath(jwb::JSONWorkbook) = jwb.package.filepath
@@ -147,6 +147,7 @@ Base.getindex(jwb::JSONWorkbook, s::Symbol) = getsheet(jwb, s)
 Base.getindex(jwb::JSONWorkbook, i::UnitRange) = getsheet(jwb, i)
 
 Base.setindex!(jwb::JSONWorkbook, x, i1::Int) = setindex!(jwb.sheets, x, i1)
+Base.setindex!(jwb::JSONWorkbook, x, s::Symbol) = setindex!(jwb.sheets, x, jwb.sheetindex[s])
 
 function Base.deleteat!(jwb::JSONWorkbook, i::Integer)
     deleteat!(getfield(jwb, :sheets), i)
