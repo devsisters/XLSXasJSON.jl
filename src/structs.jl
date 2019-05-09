@@ -146,9 +146,18 @@ Base.getindex(jwb::JSONWorkbook, i::Integer) = getsheet(jwb, i)
 Base.getindex(jwb::JSONWorkbook, s::Symbol) = getsheet(jwb, s)
 Base.getindex(jwb::JSONWorkbook, i::UnitRange) = getsheet(jwb, i)
 
-Base.setindex!(jwb::JSONWorkbook, x, i1::Int) = setindex!(jwb.sheets, x, i1)
-Base.setindex!(jwb::JSONWorkbook, x, s::Symbol) = setindex!(jwb.sheets, x, jwb.sheetindex[s])
+Base.setindex!(jwb::JSONWorkbook, jws::JSONWorksheet, i1::Int) = setindex!(jwb.sheets, jws, i1)
+Base.setindex!(jwb::JSONWorkbook, jws::JSONWorksheet, s::Symbol) = setindex!(jwb.sheets, jws, jwb.sheetindex[s])
 
+# TODO: need to make it more cleaner!
+function Base.setindex!(jwb::JSONWorkbook, df::DataFrame, i1::Int)
+    new_jws = JSONWorksheet(df, xlsxpath(jwb), sheetnames(jwb)[i1])
+    setindex!(jwb, new_jws, i1)
+end
+function Base.setindex!(jwb::JSONWorkbook, df::DataFrame, s::Symbol)
+    new_jws = JSONWorksheet(df, xlsxpath(jwb), s)
+    setindex!(jwb, new_jws, s)
+end
 function Base.deleteat!(jwb::JSONWorkbook, i::Integer)
     deleteat!(getfield(jwb, :sheets), i)
     setfield!(jwb, :sheetindex, DataFrames.Index(sheetnames.(getfield(jwb, :sheets))))
