@@ -250,6 +250,8 @@ function parse_special_dataframe(colnames, data)
 end
 
 data(jws::JSONWorksheet) = getfield(jws, :data)
+Base.getindex(jws::JSONWorksheet, ::Colon) = data(jws)
+
 xlsxpath(jws::JSONWorksheet) = getfield(jws, :xlsxpath)
 sheetnames(jws::JSONWorksheet) = getfield(jws, :sheetname)
 
@@ -258,16 +260,26 @@ DataFrames.index(jws::JSONWorksheet) = DataFrames.index(data(jws))
 DataFrames.nrow(jws::JSONWorksheet) = nrow(data(jws))
 DataFrames.ncol(jws::JSONWorksheet) = ncol(data(jws))
 
-function Base.getindex(jws::JSONWorksheet, colinds::Any)
-    return getindex(data(jws), colinds)
+function Base.getindex(jws::JSONWorksheet, colinds::DataFrames.ColumnIndex)
+    getindex(data(jws), colinds)
 end
-function Base.getindex(jws::JSONWorksheet, rowinds::Any, colinds::Any)
-    return getindex(data(jws), rowinds, colinds)
+function Base.getindex(jws::JSONWorksheet, rowinds::AbstractVector, colinds::DataFrames.ColumnIndex)
+    getindex(data(jws), rowinds, colinds)
 end
+function Base.getindex(jws::JSONWorksheet, rowinds::Integer, colinds::DataFrames.ColumnIndex)
+    getindex(data(jws), rowinds, colinds)
+end
+# df[MultiRowIndex, :]
+function Base.getindex(jws::JSONWorksheet, row_inds::AbstractVector, ::Colon)
+    getindex(data(jws), row_inds, :)
+end
+
 function Base.setindex!(jws::JSONWorksheet, v, col_ind)
     setindex!(data(jws), v, col_ind)
 end
-
+function Base.setindex!(jws::JSONWorksheet, v, rowind, col_ind)
+    setindex!(data(jws), v, rowind, col_ind)
+end
 function Base.sort(jws::JSONWorksheet, kwargs...)
     JSONWorksheet(sort(jws[:], kwargs...), xlsxpath(jws), sheetnames(jws))
 end
