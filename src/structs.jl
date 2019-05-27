@@ -128,7 +128,7 @@ function JSONWorkbook(xlsxpath::AbstractString, sheets, kwargs_per_sheet::Dict)
 
     JSONWorkbook(xf, v)
 end
-# fallback functions
+# JSONWorkbook fallback functions
 hassheet(jwb::JSONWorkbook, s::Symbol) = haskey(jwb.sheetindex, s)
 getsheet(jwb::JSONWorkbook, i) = jwb.sheets[i]
 getsheet(jwb::JSONWorkbook, s::Symbol) = getsheet(jwb, jwb.sheetindex[s])
@@ -174,19 +174,6 @@ function Base.iterate(jwb::JSONWorkbook, st)
     return (jwb[st], st + 1)
 end
 
-function Base.show(io::IO, jwb::JSONWorkbook)
-    wb = jwb.package.workbook
-    print(io, "XLSXFile(\"$(basename(jwb.package.filepath))\") ",
-              "containing $(length(jwb)) Worksheets\n")
-    @printf(io, "%6s %-15s\n", "index", "name")
-    println(io, "-"^(6+1+15+1))
-
-    for el in jwb.sheetindex.lookup
-        name = string(el[1])
-        @printf(io, "%6s %-15s\n", el[2], string(el[1]))
-    end
-end
-
 # needs better name
 function parse_special_dataframe(arr::Array{T}) where T
     missing_col = ismissing.(arr[1, :])
@@ -223,6 +210,7 @@ function parse_special_dataframe(colnames, data)
             df[i, Symbol(colinfo[1])][colinfo[2]] = x
 
         elseif T2 <: Array{Dict, 1}
+            #TODO: Fix structure or povide error message
             tmp_holder = df[i, Symbol(colinfo[1])]
             if !ismissing(x)
                 if length(tmp_holder) < colinfo[2]
@@ -287,9 +275,28 @@ function Base.sort!(jws::JSONWorksheet, kwargs...)
     setfield!(jws, :data, sort(jws[:], kwargs...))
 end
 
-function Base.show(io::IO, x::JSONWorksheet)
-    @printf(io, "[%s] sheet_name:%s \n", basename(xlsxpath(x)), sheetnames(x))
-    show(io, data(x))
+## Display
+function Base.summary(io::IO, jwb::JSONWorkbook)
+    @printf(io, "JSONWorkbook(\"%s\") containing %i Worksheets\n",
+                basename(xlsxpath(jwb)), length(jwb))
+end
+function Base.show(io::IO, jwb::JSONWorkbook)
+    wb = jwb.package.workbook
+    summary(io, jwb)
+    @printf(io, "%6s %-15s\n", "index", "name")
+    println(io, "-"^(6+1+15+1))
+
+    for el in jwb.sheetindex.lookup
+        name = string(el[1])
+        @printf(io, "%6s %-15s\n", el[2], string(el[1]))
+    end
+end
+function Base.summary(jws::JSONWorksheet)
+    @sprintf("%d×%d %s - %s!%s", size(jws)..., "JSONWorksheet", basename(xlsxpath(jws)), sheetnames(jws))
+end
+function Base.show(io::IO, jws::JSONWorksheet)
+    summary(io, jws)
+    show(io, data(jws))
 end
 # TODO: Need to change this fucntion to override only JSONWorksheet, not OrderedDict itself
 # see base/show.jl:73l
