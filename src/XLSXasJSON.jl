@@ -9,7 +9,7 @@ using DataFrames
 import DataFrames.AbstractDataFrame
 
 include("structs.jl")
-include("read.jl")
+include("parse_colname.jl")
 include("write.jl")
 
 export JSONWorkbook, JSONWorksheet,

@@ -2,22 +2,36 @@ using Test
 using XLSXasJSON
 using JSON
 
-data_path = joinpath(@__DIR__, "..", "data")
+data_path = joinpath(@__DIR__, "data")
 # data_path = joinpath(@__DIR__, "data")
 
-@testset "Colname Determine" begin
-    @test XLSXasJSON.assign_jsontype("BasicJSONData") == Any
-    @test XLSXasJSON.assign_jsontype("address.city") == Dict
-    @test XLSXasJSON.assign_jsontype("aliases[]") == Array{Any, 1}
-    @test XLSXasJSON.assign_jsontype("phones[0].number") == Array{Dict, 1}
-    @test XLSXasJSON.assign_jsontype("phones[Int]") == Array{Int64, 1}
-    @test XLSXasJSON.assign_jsontype("phones[AbstractFloat]") == Array{AbstractFloat, 1}
-    @test XLSXasJSON.assign_jsontype("phones[Float64]") == Array{Float64, 1}
-    @test XLSXasJSON.assign_jsontype("phones[String]") == Array{String, 1}
-    # @test parse_keyname("phones[Vector]") == Array{Vector, 1}
+import XLSXasJSON.determine_jsonvalue
+@testset "determine jsonvalue" begin
+    simple = ["d1" "d1.d2a" "d1.d2b" "d1.d2c.d3a" "d1.d2c.d3b"]
+
+    @test determine_jsonvalue(simple[1]) == Any
+    @test determine_jsonvalue(simple[2]) == Dict
+    @test determine_jsonvalue("aliases[]") == Array{Any, 1}
+    @test determine_jsonvalue("phones[0].number") == Array{Dict, 1}
+    @test determine_jsonvaluedetermine_jsonvalue("phones[Int]") == Array{Int64, 1}
+    @test determine_jsonvalue("phones[AbstractFloat]") == Array{AbstractFloat, 1}
+    @test determine_jsonvalue("phones[Float64]") == Array{Float64, 1}
+    @test determine_jsonvalue("phones[String]") == Array{String, 1}
+
+end
+
+import XLSXasJSON.construct_row
+@testset "construct_row" begin
+    simple = ["d1" "d1b.d2a" "d1b.d2b" "d1b.d2c.d3a" "d1b.d2c.d3b"]
+    construct_row(simple)
+
+    vector = ["d()" "d1.d2a" "d1.d2b()" "d1.d2c.d3a" "d1.d2c.d3b()"]
+    construct_row(vector)
+
 end
 
 @testset "JSONData Types" begin
+
     data_basic = ["base", "string", 100, 100.100, missing]
     data_dict = ["dict.A" "dict.B";
              100      100.100;
