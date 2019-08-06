@@ -1,11 +1,15 @@
 using Test
 using XLSXasJSON
+using DataStructures
 using JSON
+using XLSX
 
 data_path = joinpath(@__DIR__, "data")
 # data_path = joinpath(@__DIR__, "data")
 
 import XLSXasJSON.determine_jsonvalue
+import XLSXasJSON.construct_row
+
 @testset "determine jsonvalue" begin
     simple = ["d1" "d1.d2a" "d1.d2b" "d1.d2c.d3a" "d1.d2c.d3b"]
 
@@ -23,12 +27,24 @@ end
 import XLSXasJSON.construct_row
 @testset "construct_row" begin
     simple = ["d1" "d1b.d2a" "d1b.d2b" "d1b.d2c.d3a" "d1b.d2c.d3b"]
-    construct_row(simple)
+    x = construct_row(simple)
+    OrderedDict("d1" => "", "d1b" => OrderedDict("d2a" =>""))
 
     vector = ["d()" "d1.d2a" "d1.d2b()" "d1.d2c.d3a" "d1.d2c.d3b()"]
-    construct_row(vector)
+    x = construct_row(vector)
 
 end
+
+# testdata
+f = joinpath(data_path, "refactoring.xlsx")
+jws = JSONWorksheet(f, 1)
+
+JSON.json(jws[1]) =="""{"d1":"A1","d1b":{"d2a":"B1","d2b":"C1","d2c":{"d3a":"D1","d3b":"E1"}}}"""
+
+# TODO!
+jws = JSONWorksheet(f, 2)
+
+
 
 @testset "JSONData Types" begin
 

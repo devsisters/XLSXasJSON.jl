@@ -47,15 +47,16 @@ function JSONWorksheet(data::DataFrame, xlsxpath, sheet)
     JSONWorksheet(data, xlsxpath, Symbol(sheet))
 end
 function JSONWorksheet(arr::Array{T}, xlsxpath, sheet, compact_to_singleline = false) where T
-    data = parse_special_dataframe(arr)
-    if compact_to_singleline
-        df = DataFrame()
-        for col in names(data)
-            df[col] = [data[col]]
-        end
-        data = df
-    end
-    JSONWorksheet(data, xlsxpath, sheet)
+    data = construct_jsondata(arr)
+    # if compact_to_singleline
+    #     df = DataFrame()
+    #     for col in names(data)
+    #         df[col] = [data[col]]
+    #     end
+    #     data = df
+    # end
+    # JSONWorksheet(data, xlsxpath, sheet)
+    data
 end
 function JSONWorksheet(xf::XLSX.XLSXFile, sheet;
                        start_line=1, row_oriented=true, compact_to_singleline = false)
@@ -176,6 +177,45 @@ function Base.show(io::IO, jwb::JSONWorkbook)
         @printf(io, "%6s %-15s\n", el[2], string(el[1]))
     end
 end
+function construct_jsondata(arr::Array{T}) where T
+    missing_col = ismissing.(arr[1, :])
+    arr = arr[:, broadcast(!, missing_col)]
+
+    missing_row = broadcast(r -> all(ismissing.(arr[r, :])), 1:size(arr, 1))
+    arr = arr[broadcast(!, missing_row), :]
+
+    construct_jsondata(string.(arr[1, :]), arr[2:end, :])
+end
+function construct_jsondata(cnames, data::Array{T, 2}) where T
+    template = construct_row(cnames)
+
+    result = Array{Any}(undef, size(data,1))
+    for i in 1:size(data, 1)
+        tmp = deepcopy(template)
+        for j in 1:size(data, 2)
+            v = data[i, j]
+            target = setindex_on_target!(tmp, v, cnames[j])
+        end
+        result[i] = tmp
+    end
+    result
+end
+
+function setindex_on_target!(d::AbstractDict, value, colname)
+    #TODO: key() 대응 필요
+    mk = split(colname, ".")
+    target = d
+    if length(mk) >= 2
+        for i in 1:length(mk)-1
+            target = get(target, mk[i], nothing)
+        end
+    end
+
+    @assert !isnothing(target) "could not find `$colname` in $d"
+    setindex!(target, value, mk[end])
+    return d
+end
+
 
 # needs better name
 function parse_special_dataframe(arr::Array{T}) where T

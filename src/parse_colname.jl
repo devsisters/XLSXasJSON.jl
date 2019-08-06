@@ -22,6 +22,7 @@ function determine_jsonvalue(k)::Tuple{String,DataType}
         k = chop(k; head=1, tail=1) #remove []
         k = split(k, ",")
         @assert length(k) == 2 "Specify index of Vector{Dict} data in $(k[1])"
+        
         if occursin(reg_vec, k[2])
             k2 = replace(k[2], reg_vec => "")
             T = _vectordatatype(k[2])
@@ -42,14 +43,13 @@ function determine_jsonvalue(k)::Tuple{String,DataType}
 end
 
 """
-    construct_row(col_names::Vector)
+    construct_row(cnames::Vector)
 
 """
-function construct_row(col_names)
-
+function construct_row(cnames)
     empty_row = OrderedDict{String, Any}()
 
-    for col in col_names
+    for col in cnames
         mk = split(col, ".")
         target = empty_row
         for (i, k) in enumerate(mk)
@@ -68,14 +68,4 @@ function construct_row(col_names)
         end
     end
     return empty_row
-end
-
-function find_target(d::AbstractDict, col)
-    mk = split(col, ".")
-    target = get(d, mk[1], nothing)
-    for i in 2:length(mk)
-        target = get(target, mk[i], nothing)
-    end
-    @assert !isnothing(target) "could not find `$col` in $d"
-    return target
 end
