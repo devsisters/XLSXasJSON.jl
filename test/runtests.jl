@@ -4,8 +4,8 @@ using DataStructures
 using JSON
 using XLSX
 
-data_path = joinpath(@__DIR__, "data")
-# data_path = joinpath(@__DIR__, "data")
+data_path = joinpath(@__DIR__, "test/data")
+
 
 import XLSXasJSON.determine_jsonvalue
 import XLSXasJSON.construct_row
