@@ -201,32 +201,94 @@ function construct_jsondata(cnames, data::Array{T, 2}) where T
     result
 end
 
-function setindex_on_target!(d::AbstractDict, value, colname)
-    #TODO: key() 대응 필요
-    mk = split(colname, ".")
+function setindex_on_target!(d::AbstractDict, value, colname::AbstractString)
+    setindex_on_target!(d, value, split(colname, "."))
+end
+
+function setindex_on_target!(d::AbstractDict, value, cnames)
     target = d
-    if length(mk) >= 2
-        for i in 1:length(mk)-1
-            target = get(target, mk[i], nothing)
+    if length(cnames) >= 2
+        for i in 1:length(cnames)-1
+            target = get(target, cnames[i], nothing)
         end
     end
-
     @assert !isnothing(target) "could not find `$colname` in $d"
-    setindex!(target, value, mk[end])
+
+    # parse value to its determined type by colname
+    k, T = determine_datatype(cnames[end])
+    if T == Any
+        setindex!(target, value, k)
+    elseif T <: Array{T2, 1} where T2 <: AbstractDict
+        @error "$T 만들어!"
+        k2 = split(k, ",")
+        idx = parse(Int, k2[1])
+        @show k2
+        @show target
+        if occursin(VEC_REGEX, k)
+            # @show k2
+        else
+
+        end
+        if idx == 1
+        end
+        k = k2[2]
+
+    elseif T <: Array{T3, 1} where T3
+        if !ismissing(value)
+            x = filter(!isempty, split(value, Regex(join(XLSXasJSON.DELIM, "|"))))
+            value = strip.(x) #NOTE 이거 버그 소지 있음
+            if T <: Array{T4, 1} where T4 <: Real
+                value = parse.(eltype(T), value)
+            end
+        end
+        setindex!(target, value, k)
+    end
+
     return d
 end
 
 
-# needs better name
-function parse_special_dataframe(arr::Array{T}) where T
-    missing_col = ismissing.(arr[1, :])
-    arr = arr[:, broadcast(!, missing_col)]
+"""
+    construct_row(cnames::Vector)
 
-    missing_row = broadcast(r -> all(ismissing.(arr[r, :])), 1:size(arr, 1))
-    arr = arr[broadcast(!, missing_row), :]
+"""
+function construct_row(cnames)
+    empty_row = OrderedDict{String, Any}()
 
-    parse_special_dataframe(string.(arr[1, :]), arr[2:end, :])
+    for col in cnames
+        mk = split(col, ".")
+        target = empty_row
+        for (i, k) in enumerate(mk)
+            if i > 1
+                target = target[mk[i-1]]
+            end
+
+            if isa(target, AbstractDict)
+                v = get(target, k, OrderedDict{Any, Any}())
+            else
+                v = ""
+            end
+            if i == length(mk)
+                k, TV = determine_datatype(k)
+                @assert ismissing(get(target, k, missing)) "{$k: $TV} is being overwritten, check for duplicated name"
+                if TV <: Array{T2, 1} where T2 <: AbstractDict
+                    k2 = split(k, ",")
+                    v = [OrderedDict(string(k2[2]) => "")]
+                    setindex_on_target!(empty_row, v, mk[1:i-1])
+                end
+            end
+
+            if isa(v, AbstractDict)
+                setindex!(target, v, k)
+            end
+        end
+    end
+    @show empty_row
+    return empty_row
 end
+
+
+# needs better name
 function parse_special_dataframe(colnames, data)
     @assert allunique(colnames) "There are duplicated column name\n $colnames"
 

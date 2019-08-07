@@ -7,7 +7,7 @@ using XLSX
 data_path = joinpath(@__DIR__, "test/data")
 
 
-import XLSXasJSON.determine_jsonvalue
+import XLSXasJSON.determine_datatype
 import XLSXasJSON.construct_row
 
 @testset "determine jsonvalue" begin
@@ -36,15 +36,19 @@ import XLSXasJSON.construct_row
 end
 
 # testdata
-f = joinpath(data_path, "refactoring.xlsx")
-jws = JSONWorksheet(f, 1)
+@testset "XLSX Readng - row oriented" begin
 
-JSON.json(jws[1]) =="""{"d1":"A1","d1b":{"d2a":"B1","d2b":"C1","d2c":{"d3a":"D1","d3b":"E1"}}}"""
+    f = joinpath(data_path, "refactoring.xlsx")
+    jws = JSONWorksheet(f, :simple)
+    JSON.json(jws[1]) =="""{"d1":"A1","d1b":{"d2a":"B1","d2b":"C1","d2c":{"d3a":"D1","d3b":"E1"}}}"""
 
-# TODO!
-jws = JSONWorksheet(f, 2)
+    jws = JSONWorksheet(f, :vector)
+    JSON.json(jws[1]) == replace("""
+    {"d":["A1_1","A1_2","A1_3"],"d1":{"d2a":"B1","d2b":["C1_1","C1_2","C1_3"],"d2c":{"d3a":"D1","d3b":["E1_1","E1_2","E1_3"]}},"e":[1,2,3],"e1":{"e2b":[7.0,8.0,9.0]}}""", 
+    "\n" => "")
 
 
+end
 
 @testset "JSONData Types" begin
 
