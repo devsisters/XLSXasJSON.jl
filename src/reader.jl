@@ -102,14 +102,16 @@ recursive_merge(x::AbstractDict...) = merge(recursive_merge, x...)
 
 overwrites `Dict{K<:Integer,V} to Array{Dict, 1}` recursively
 """
-collect_vecdict!(x) = x
-function collect_vecdict!(x::T) where {T <: AbstractDict}
+collect_vecdict(x) = x
+function collect_vecdict(x::T) where {T <: AbstractDict}
     for k in keys(x)
-        v = collect_vecdict!(x[k])
+        v = collect_vecdict(x[k])
         if isa(v, Array{T2, 1} where T2)
-            T2 = @eval $(Symbol(T.name))
-            nd = T2(Pair(k, collect_vecdict!(x[k])))
+            # TODO T2 = @eval $(Symbol(T.name))
+            nd = OrderedDict(Pair(k, collect_vecdict(x[k])))
             x = merge(x, nd)
+            @show k
+            @show x[k]
         else
             x[k] = v
         end
@@ -117,7 +119,7 @@ function collect_vecdict!(x::T) where {T <: AbstractDict}
     return x
 end
 
-function collect_vecdict!(x::AbstractDict{K,V}) where {K <: Integer, V}
+function collect_vecdict(x::AbstractDict{K,V}) where {K <: Integer, V}
     # remove Integer Key
     collect(values(x))
 end
@@ -143,7 +145,7 @@ function JSONWorksheet(arr::Array{T}, xlsxpath, sheet, compact_to_singleline = f
 
     meta = XLSXWrapperMeta(string.(arr[1, :]))
     data = broadcast(i -> construct_dict(meta, arr[i, :]), 2:size(arr, 1))
-    collect_vecdict!.(data)
+    data = collect_vecdict.(data)
 
     if create_dataframe
         dataframe = construct_dataframe(data) 
@@ -218,7 +220,7 @@ end
 
 ## JSONWorksheet interface
 data(jws::JSONWorksheet) = getfield(jws, :data)
-dataframe(jws::JSONWorksheet) = getfield(jws, :dataframe)
+df(jws::JSONWorksheet) = getfield(jws, :dataframe)
 
 xlsxpath(jws::JSONWorksheet) = getfield(jws, :xlsxpath)
 sheetnames(jws::JSONWorksheet) = getfield(jws, :sheetname)
@@ -314,7 +316,7 @@ end
 Base.iterate(jwb::JSONWorkbook) = iterate(jwb, 1)
 function Base.iterate(jwb::JSONWorkbook, st)
     st > length(jwb) && return nothing
-    return (jwb[st], st + 1)
+    return (df(jwb[st]), st + 1)
 end
 
 ## Display
@@ -338,7 +340,7 @@ function Base.summary(jws::JSONWorksheet)
 end
 function Base.show(io::IO, jws::JSONWorksheet)
     summary(io, jws)
-    show(io, dataframe(jws))
+    show(io, df(jws))
 end
 # TODO: Need to change this fucntion to override only JSONWorksheet, not OrderedDict itself
 # see base/show.jl:73l
