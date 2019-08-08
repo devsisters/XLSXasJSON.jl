@@ -1,6 +1,8 @@
 const CS = JSON.CommonSerialization
 const SC = JSON.StructuralContext
 
+JSON.json(jws::JSONWorksheet) = JSON.json(data(jws))
+JSON.json(jws::JSONWorksheet, indent) = JSON.json(data(jws), indent)
 
 # removes indent for Vector
 function compact_show_json(io, s, x::Array{T}) where T
@@ -22,7 +24,7 @@ end
 function write end
 function write(file::Union{String, IO}, jws::JSONWorksheet; indent = 2, drop_null = false)
     open(file, "w") do io
-        data = JSON.json(jws.data, indent)
+        data = JSON.json(data(jws), indent)
         if drop_null
             data = dropnull(data)
         end

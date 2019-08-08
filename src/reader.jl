@@ -52,6 +52,8 @@ struct XLSXWrapperMeta{K,V} <: AbstractDict{K,V}
     map::AbstractDict{K,V}
 end
 function XLSXWrapperMeta(cnames)
+    @assert allunique(cnames) "Column names must be unique, check for duplication in \n$cnames"
+
     map = OrderedDict{String, Any}()
     for k in cnames
         name = split(k, ".")
@@ -128,11 +130,11 @@ end
 mutable struct JSONWorksheet
     meta
     data
-    dataframe::DataFrame # will be removed, only here for backward compatibility
+    dataframe::Union{DataFrame, Missing} # for datahandling like Excel spreadsheet
     xlsxpath::String
     sheetname::String
 end
-function JSONWorksheet(arr::Array{T}, xlsxpath, sheet, compact_to_singleline = false) where T
+function JSONWorksheet(arr::Array{T}, xlsxpath, sheet, compact_to_singleline = false, create_dataframe = true) where T
     missing_col = ismissing.(arr[1, :])
     arr = arr[:, broadcast(!, missing_col)]
 
@@ -141,10 +143,13 @@ function JSONWorksheet(arr::Array{T}, xlsxpath, sheet, compact_to_singleline = f
 
     meta = XLSXWrapperMeta(string.(arr[1, :]))
     data = broadcast(i -> construct_dict(meta, arr[i, :]), 2:size(arr, 1))
-    data = collect_vecdict!.(data)
+    collect_vecdict!.(data)
 
-    dataframe = vcat(convert.(DataFrame, data)...)
-    
+    if create_dataframe
+        dataframe = construct_dataframe(data) 
+    else
+        dataframe = missing
+    end    
     JSONWorksheet(meta, data, dataframe, xlsxpath, string(sheet))
 end
 function JSONWorksheet(xf::XLSX.XLSXFile, sheet;
@@ -200,6 +205,23 @@ function construct_dict(meta::XLSXWrapperMeta, singlerow)
     end
     return merge(result)
 end
+function construct_dataframe(data)
+    k = unique(keys.(data))
+    @assert length(k) == 1 "something is wrong at $k"
+    v = Array{Any, 1}(undef, length(k[1]))
+    for (i, key) in enumerate(k[1])
+        v[i] = getindex.(data, key)
+    end
+
+    return DataFrame(v, Symbol.(k[1]))
+end
+
+## JSONWorksheet interface
+data(jws::JSONWorksheet) = getfield(jws, :data)
+dataframe(jws::JSONWorksheet) = getfield(jws, :dataframe)
+
+xlsxpath(jws::JSONWorksheet) = getfield(jws, :xlsxpath)
+sheetnames(jws::JSONWorksheet) = getfield(jws, :sheetname)
 
 
 
@@ -269,6 +291,7 @@ Base.getindex(jwb::JSONWorkbook, i::UnitRange) = getsheet(jwb, i)
 Base.setindex!(jwb::JSONWorkbook, jws::JSONWorksheet, i1::Int) = setindex!(jwb.sheets, jws, i1)
 Base.setindex!(jwb::JSONWorkbook, jws::JSONWorksheet, s::Symbol) = setindex!(jwb.sheets, jws, jwb.sheetindex[s])
 
+
 # TODO: need to make it more cleaner!
 function Base.setindex!(jwb::JSONWorkbook, df::DataFrame, i1::Int)
     new_jws = JSONWorksheet(df, xlsxpath(jwb), sheetnames(jwb)[i1])
@@ -294,46 +317,6 @@ function Base.iterate(jwb::JSONWorkbook, st)
     return (jwb[st], st + 1)
 end
 
-
-## JSONWorksheet interface
-# TODO change dataframe to data!
-data(jws::JSONWorksheet) = getfield(jws, :dataframe)
-Base.getindex(jws::JSONWorksheet, ::Colon) = data(jws)
-
-xlsxpath(jws::JSONWorksheet) = getfield(jws, :xlsxpath)
-sheetnames(jws::JSONWorksheet) = getfield(jws, :sheetname)
-
-DataFrames.index(jws::JSONWorksheet) = DataFrames.index(data(jws))
-DataFrames.nrow(jws::JSONWorksheet) = nrow(data(jws))
-DataFrames.ncol(jws::JSONWorksheet) = ncol(data(jws))
-
-function Base.getindex(jws::JSONWorksheet, colinds::DataFrames.ColumnIndex)
-    getindex(data(jws), colinds)
-end
-function Base.getindex(jws::JSONWorksheet, rowinds::AbstractVector, colinds::DataFrames.ColumnIndex)
-    getindex(data(jws), rowinds, colinds)
-end
-function Base.getindex(jws::JSONWorksheet, rowinds::Integer, colinds::DataFrames.ColumnIndex)
-    getindex(data(jws), rowinds, colinds)
-end
-# df[MultiRowIndex, :]
-function Base.getindex(jws::JSONWorksheet, row_inds::AbstractVector, ::Colon)
-    getindex(data(jws), row_inds, :)
-end
-
-function Base.setindex!(jws::JSONWorksheet, v, col_ind)
-    setindex!(data(jws), v, col_ind)
-end
-function Base.setindex!(jws::JSONWorksheet, v, rowind, col_ind)
-    setindex!(data(jws), v, rowind, col_ind)
-end
-function Base.sort(jws::JSONWorksheet, kwargs...)
-    JSONWorksheet(sort(jws[:], kwargs...), xlsxpath(jws), sheetnames(jws))
-end
-function Base.sort!(jws::JSONWorksheet, kwargs...)
-    setfield!(jws, :data, sort(jws[:], kwargs...))
-end
-
 ## Display
 function Base.summary(io::IO, jwb::JSONWorkbook)
     @printf(io, "JSONWorkbook(\"%s\") containing %i Worksheets\n",
@@ -355,14 +338,14 @@ function Base.summary(jws::JSONWorksheet)
 end
 function Base.show(io::IO, jws::JSONWorksheet)
     summary(io, jws)
-    show(io, data(jws))
+    show(io, dataframe(jws))
 end
 # TODO: Need to change this fucntion to override only JSONWorksheet, not OrderedDict itself
 # see base/show.jl:73l
-function Base.show(io::IO, x::OrderedDict)
-    for (i, (k, v)) in enumerate(x)
-        print(io, "{", k, ": ")
-        print(io, v, "}")
-        i < length(x) && print(io, ", ")
-    end
-end
+# function Base.show(io::IO, x::OrderedDict)
+#     for (i, (k, v)) in enumerate(x)
+#         print(io, "{", k, ": ")
+#         print(io, v, "}")
+#         i < length(x) && print(io, ", ")
+#     end
+# end

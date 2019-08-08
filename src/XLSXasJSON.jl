@@ -11,9 +11,8 @@ include("reader.jl")
 include("writer.jl")
 
 export XLSXWrapperMeta, XLSXWrapperData, 
-JSONWorkbook, JSONWorksheet
+JSONWorkbook, JSONWorksheet,
         hassheet, sheetnames,
-        xlsxpath,
-        dropnull
+        xlsxpath, dropnull
 
 end # module
