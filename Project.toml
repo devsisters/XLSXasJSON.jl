@@ -1,7 +1,11 @@
 name = "XLSXasJSON"
 uuid = "8c9e00cc-ccf1-11e8-3de6-5b028f480d9e"
 author = ["김용희 <yongheekim@devsisters.com>"]
+<<<<<<< HEAD
+version = "0.3.0"
+=======
 version = "0.2.1"
+>>>>>>> master
 
 [deps]
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"

@@ -1,23 +1,61 @@
 using Test
 using XLSXasJSON
+using DataStructures
 using JSON
+using XLSX
 
-data_path = joinpath(@__DIR__, "..", "data")
-# data_path = joinpath(@__DIR__, "data")
+import XLSXasJSON.XLSXWrapperMeta
+import XLSXasJSON.XLSXWrapperData
 
-@testset "Colname Determine" begin
-    @test XLSXasJSON.assign_jsontype("BasicJSONData") == Any
-    @test XLSXasJSON.assign_jsontype("address.city") == Dict
-    @test XLSXasJSON.assign_jsontype("aliases[]") == Array{Any, 1}
-    @test XLSXasJSON.assign_jsontype("phones[0].number") == Array{Dict, 1}
-    @test XLSXasJSON.assign_jsontype("phones[Int]") == Array{Int64, 1}
-    @test XLSXasJSON.assign_jsontype("phones[AbstractFloat]") == Array{AbstractFloat, 1}
-    @test XLSXasJSON.assign_jsontype("phones[Float64]") == Array{Float64, 1}
-    @test XLSXasJSON.assign_jsontype("phones[String]") == Array{String, 1}
-    # @test parse_keyname("phones[Vector]") == Array{Vector, 1}
+data_path = joinpath(@__DIR__, "test/data")
+
+
+
+@testset "Datatype decision" begin
+    data = ["a" "b()" "c(Int)" "d(Float)"]
+    meta = XLSXWrapperMeta(data)
+    @test meta["a"][1] == Any
+    @test meta["b()"][1] == Array{Any, 1}
+    @test meta["c(Int)"][1] == Array{Int, 1}
+    @test meta["d(Float)"][1] == Array{Float64, 1}
+end
+
+@testset "Colname splitting" begin
+    data = ["a" "a.[1,d3]" "a.[2,d3]"]
+    meta = XLSXWrapperMeta(data)
+    @test meta["a"][2] == ["a"]
+    @test meta["a.[1,d3]"][2] == ["a", 1, "d3"]
+    @test meta["a.[2,d3]"][2] == ["a", 2, "d3"]
+end
+
+jws.data
+collect(keys.(jws.data))
+
+# testdata
+@testset "XLSX Readng by sheet" begin
+    f = joinpath(data_path, "refactoring.xlsx")
+    jws = JSONWorksheet(f, :simple)
+
+
+
+    
+    @test names(jws) == ["d1","d1b.d2a","d1b.d2b","d1b.d2c.d3a","d1b.d2c.d3b"]
+
+    JSON.json(jws) ==replace("""
+    [{"d1":"A1","d1b":{"d2a":"B1","d2b":"C1","d2c":{"d3a":"D1","d3b":"E1"}}},{"d1":"A2","d1b":{"d2a":"B2","d2b":"C2","d2c":{"d3a":"D2","d3b":"E2"}}}]""", 
+    "\n" => "")
+
+    jws = JSONWorksheet(f, :vector)
+
+    JSON.json(jws[1]) == replace("""
+    {"d":["A1_1","A1_2","A1_3"],"d1":{"d2a":"B1","d2b":["C1_1","C1_2","C1_3"],"d2c":{"d3a":"D1","d3b":["E1_1","E1_2","E1_3"]}},"e":[1,2,3],"e1":{"e2b":[7.0,8.0,9.0]}}""", 
+    "\n" => "")
+
+
 end
 
 @testset "JSONData Types" begin
+
     data_basic = ["base", "string", 100, 100.100, missing]
     data_dict = ["dict.A" "dict.B";
              100      100.100;

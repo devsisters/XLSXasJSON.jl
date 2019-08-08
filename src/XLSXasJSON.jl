@@ -1,4 +1,3 @@
-# thanks to: https://github.com/stevetarver/excel-as-json
 module XLSXasJSON
 
 using Printf
@@ -8,13 +7,12 @@ using DataStructures
 using DataFrames
 import DataFrames.AbstractDataFrame
 
-include("structs.jl")
-include("read.jl")
-include("write.jl")
+include("reader.jl")
+include("writer.jl")
 
-export JSONWorkbook, JSONWorksheet,
-       hassheet, sheetnames,
-       xlsxpath,
-       dropnull
+export XLSXWrapperMeta, XLSXWrapperData, 
+JSONWorkbook, JSONWorksheet,
+        hassheet, sheetnames,
+        xlsxpath, dropnull
 
-end
+end # module

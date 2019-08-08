@@ -1,28 +1,9 @@
 const CS = JSON.CommonSerialization
 const SC = JSON.StructuralContext
 
-function JSON.show_json(io::SC, s::CS, jws::JSONWorksheet)
-    JSON.begin_array(io)
-    for (i, row) in enumerate(eachrow(jws))
-        JSON.indent(io)
-        JSON.begin_object(io)
+JSON.json(jws::JSONWorksheet) = JSON.json(data(jws))
+JSON.json(jws::JSONWorksheet, indent) = JSON.json(data(jws), indent)
 
-        for el in pairs(row)
-            if isa(el[2], Array{T} where T <: AbstractDict)
-                JSON.show_pair(io, s, el)
-            elseif isa(el[2], Array{T} where T)
-                JSON.show_key(io, el[1])
-                JSON.indent(io)
-                compact_show_json(io, s, el[2])
-            else
-                JSON.show_pair(io, s, el)
-            end
-        end
-        JSON.end_object(io)
-        i != nrow(jws) && JSON.delimit(io)
-    end
-    JSON.end_array(io)
-end
 # removes indent for Vector
 function compact_show_json(io, s, x::Array{T}) where T
     JSON.begin_array(io)
@@ -40,11 +21,10 @@ function dropnull(s)
     replace(s, r"(\"[\w]*\":null,)|(,?\"[\w]*\":null)" => "")
 end
 
-
 function write end
 function write(file::Union{String, IO}, jws::JSONWorksheet; indent = 2, drop_null = false)
     open(file, "w") do io
-        data = JSON.json(jws, indent)
+        data = JSON.json(data(jws), indent)
         if drop_null
             data = dropnull(data)
         end
