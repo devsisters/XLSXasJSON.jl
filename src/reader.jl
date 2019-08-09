@@ -79,7 +79,10 @@ Base.length(x::XLSXWrapperMeta) = length(x.map)
 
 Base.get(x::XLSXWrapperMeta, key, default) = get(x.map, key, default)
 Base.filter(f, x::XLSXWrapperMeta) = filter(f, x.map)
-
+function Base.merge(a::XLSXWrapperMeta, b::XLSXWrapperMeta)
+    cnames = [collect(keys(a.map)); collect(keys(b.map))]
+    XLSXWrapperMeta(unique(cnames))
+end
 
 mutable struct XLSXWrapperData{T}
     key::Union{AbstractString, Integer}
@@ -92,7 +95,7 @@ function Base.convert(::Type{T}, x::XLSXWrapperData{T2}) where {T<:AbstractDict,
     T(Pair(x.key, convert(T, x.value)))
 end
 
-function Base.merge(XLSXWrapperData...)
+function recursive_merge(XLSXWrapperData...)
     recursive_merge(convert.(OrderedDict, XLSXWrapperData...)...)
 end
 recursive_merge(x::AbstractDict...) = merge(recursive_merge, x...)
@@ -110,8 +113,6 @@ function collect_vecdict(x::T) where {T <: AbstractDict}
             # TODO T2 = @eval $(Symbol(T.name))
             nd = OrderedDict(Pair(k, collect_vecdict(x[k])))
             x = merge(x, nd)
-            @show k
-            @show x[k]
         else
             x[k] = v
         end
@@ -120,8 +121,17 @@ function collect_vecdict(x::T) where {T <: AbstractDict}
 end
 
 function collect_vecdict(x::AbstractDict{K,V}) where {K <: Integer, V}
-    # remove Integer Key
-    collect(values(x))
+    # remove Integer Key and filter missing
+    r = collect(values(x))
+    check_missing = Int[]
+    for (i, el) in enumerate(r)
+        if all(ismissing.(values(el)))
+            push!(check_missing, i)
+        end
+    end
+    deleteat!(r, check_missing)
+
+    return r
 end
 
 ################################################
@@ -136,7 +146,7 @@ mutable struct JSONWorksheet
     xlsxpath::String
     sheetname::String
 end
-function JSONWorksheet(arr::Array{T}, xlsxpath, sheet, compact_to_singleline = false, create_dataframe = true) where T
+function JSONWorksheet(arr::Array{T}, xlsxpath, sheet, create_dataframe = false) where T
     missing_col = ismissing.(arr[1, :])
     arr = arr[:, broadcast(!, missing_col)]
 
@@ -155,7 +165,7 @@ function JSONWorksheet(arr::Array{T}, xlsxpath, sheet, compact_to_singleline = f
     JSONWorksheet(meta, data, dataframe, xlsxpath, string(sheet))
 end
 function JSONWorksheet(xf::XLSX.XLSXFile, sheet;
-                       start_line=1, row_oriented=true, compact_to_singleline = false)
+                       start_line=1, row_oriented=true)
     ws = isa(sheet, Symbol) ? xf[string(sheet)] : xf[sheet]
     sheet = ws.name
     # orientation handling
@@ -173,7 +183,7 @@ function JSONWorksheet(xf::XLSX.XLSXFile, sheet;
         end
     @assert !isempty(ws) "$(sheet)!$start_line:$start_line does not contains any data, try change 'start_line=$start_line'"
 
-    JSONWorksheet(ws, xf.filepath, sheet, compact_to_singleline)
+    JSONWorksheet(ws, xf.filepath, sheet)
 end
 function JSONWorksheet(xlsxpath, sheet; kwargs...)
     xf = XLSX.readxlsx(xlsxpath)
@@ -181,6 +191,7 @@ function JSONWorksheet(xlsxpath, sheet; kwargs...)
     close(xf)
     return x
 end
+
 
 function construct_dict(meta::XLSXWrapperMeta, singlerow)
     result = Array{XLSXWrapperData, 1}(undef, length(meta))
@@ -205,7 +216,7 @@ function construct_dict(meta::XLSXWrapperMeta, singlerow)
         end
         result[i] = x
     end
-    return merge(result)
+    return recursive_merge(result)
 end
 function construct_dataframe(data)
     k = unique(keys.(data))
@@ -217,14 +228,37 @@ function construct_dataframe(data)
 
     return DataFrame(v, Symbol.(k[1]))
 end
+function construct_dataframe!(jws::JSONWorksheet)
+    jws.dataframe = construct_dataframe(jws.data)
+end
 
-## JSONWorksheet interface
 data(jws::JSONWorksheet) = getfield(jws, :data)
 df(jws::JSONWorksheet) = getfield(jws, :dataframe)
 
 xlsxpath(jws::JSONWorksheet) = getfield(jws, :xlsxpath)
 sheetnames(jws::JSONWorksheet) = getfield(jws, :sheetname)
 
+function Base.merge(a::JSONWorksheet, b::JSONWorksheet, bykey)
+    @assert haskey(a.meta, bykey) "JSONWorksheet-$(a.sheetname) do not has `$bykey`"
+    @assert haskey(b.meta, bykey) "JSONWorksheet-$(b.sheetname) do not has `$bykey`"
+    
+    output = a.data
+    for row in output
+        k = row[bykey]
+        sender = filter(el -> el[bykey] == k, b.data)
+        @assert length(sender) == 1 "JSONWorksheet-$(b.sheetname) has more than 1 row of `$bykey`"
+
+        merge!(row, sender[1])
+    end
+    meta = merge(a.meta, b.meta)
+    JSONWorksheet(meta, output, missing, a.xlsxpath, a.sheetname)
+end
+
+# TODO 임시 함수임... 더 robust 하게 수정필요
+function Base.sort!(jws::JSONWorksheet, key; kwargs...)
+    sorted_idx = sortperm(broadcast(el -> el[key], data(jws)); kwargs...)
+    jws.data = data(jws)[sorted_idx]
+end
 
 
 """
@@ -272,6 +306,11 @@ function JSONWorkbook(xlsxpath::AbstractString, sheets, kwargs_per_sheet::Dict)
 
     JSONWorkbook(xf, v)
 end
+function construct_dataframe!(jwb::JSONWorkbook) 
+    for i in 1:length(jwb) 
+        construct_dataframe!(jwb[i])
+    end
+end
 # JSONWorkbook fallback functions
 hassheet(jwb::JSONWorkbook, s::Symbol) = haskey(jwb.sheetindex, s)
 getsheet(jwb::JSONWorkbook, i) = jwb.sheets[i]
@@ -305,7 +344,8 @@ function Base.setindex!(jwb::JSONWorkbook, df::DataFrame, s::Symbol)
 end
 function Base.deleteat!(jwb::JSONWorkbook, i::Integer)
     deleteat!(getfield(jwb, :sheets), i)
-    setfield!(jwb, :sheetindex, DataFrames.Index(sheetnames.(getfield(jwb, :sheets))))
+    s = Symbol.(sheetnames.(getfield(jwb, :sheets)))
+    setfield!(jwb, :sheetindex, DataFrames.Index(s))
     jwb
 end
 function Base.deleteat!(jwb::JSONWorkbook, sheet::Symbol)

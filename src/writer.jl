@@ -24,7 +24,7 @@ end
 function write end
 function write(file::Union{String, IO}, jws::JSONWorksheet; indent = 2, drop_null = false)
     open(file, "w") do io
-        data = JSON.json(data(jws), indent)
+        data = JSON.json(jws, indent)
         if drop_null
             data = dropnull(data)
         end

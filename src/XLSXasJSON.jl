@@ -10,9 +10,9 @@ import DataFrames.AbstractDataFrame
 include("reader.jl")
 include("writer.jl")
 
-export XLSXWrapperMeta, XLSXWrapperData, 
-JSONWorkbook, JSONWorksheet,
+export JSONWorkbook, JSONWorksheet, construct_dataframe!,
         hassheet, sheetnames,
-        xlsxpath, dropnull
+        xlsxpath, dropnull,
+        df
 
 end # module
