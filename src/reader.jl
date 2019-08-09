@@ -275,9 +275,11 @@ function Base.merge(a::JSONWorksheet, b::JSONWorksheet, bykey)
     for row in output
         k = row[bykey]
         sender = filter(el -> el[bykey] == k, b.data)
-        @assert length(sender) == 1 "JSONWorksheet-$(b.sheetname) has more than 1 row of `$bykey`"
+        if !isempty(sender)
+            @assert length(sender) == 1 "JSONWorksheet-$(b.sheetname) has more than 1 row of `$bykey`"
 
-        merge!(row, sender[1])
+            merge!(row, sender[1])
+        end
     end
     meta = merge(a.meta, b.meta)
     JSONWorksheet(meta, output, missing, a.xlsxpath, a.sheetname)
