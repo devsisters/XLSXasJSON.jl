@@ -13,7 +13,7 @@ Parse Excel xlsx files into a Julia data structure to write them as a JSON encod
 
 You may organize Excel data by columns or rows where the first column or row contains object key names and the remaining columns/rows contain object values.
 
-Expected use is offline translation of Excel data to JSON files, although all methods are exported for other uses.
+Expected use is offline translation of Excel data to JSON files
 
 ## Installation
 
@@ -24,31 +24,30 @@ pkg> add https://github.com/devsisters/XLSXasJSON.jl
 ## Usage
 
 ``` julia
-    xf = joinpath(@__DIR__, "../data/row-oriented.xlsx")
-    a = JSONWorksheet(xf, 1)
-    a = JSONWorksheet(xf, 1; start_line = 1, row_oriented = true)
+    p = joinpath(dirname(pathof(XLSXasJSON)), "../test/data")
+    xf = joinpath(p, "examples.xlsx")
+    jws = JSONWorksheet(xf, :example1)
 
     # turns into json object
-    JSON.json(a)
+    JSON.json(jws)
     # saves with indent
-    XLSXasJSON.write("row-oriented_sheet1.json", a; indent = 2)
+    XLSXasJSON.write("examples_example1.json", jws; indent = 2)
 ```
-
 
 ### Examples
 
 #### Any
 A simple, row oriented key
 
-| firstName|
-| ---------|
-| Jihad|
+| color|
+| -----|
+| red|
 
 produces
 
 ```json
 [{
-  "firstName": "Jihad"
+  "color": "red"
 }]
 ```
 
@@ -69,10 +68,68 @@ and produces
 }]
 ```
 
+It can has as many layers as you want
+
+| a.b.c.d.e.f|
+| ---------------|
+| It can be done|
+
+and produces
+
+```json
+[{
+    "a": {
+      "b": {
+        "c": {
+          "d": {
+            "e": {
+              "f": "It can be done"
+            }
+          }
+        }
+      }
+    }
+  }]
+
+```
+
+
+#### Vector{T} where T
+An embedded array key name looks like this and has ';' delimited values. You can also decide datatype in array
+
+| array()    |array_int(Int)|array_float(float)|
+| ------------| ------------ | ------------|
+| 100;200;300 |100;200;300   |100;200;300  |
+
+and produces
+
+```json
+[{
+  "array": [
+    "100",
+    "200",
+    "300"
+  ],
+  {
+  "array_int": [
+    100,
+    200,
+    300
+  ],
+  {
+  "array_float": [
+    100.0,
+    200.0,
+    300.0
+  ]
+}]
+```
+You can add delim string with `push!(XLSXasJSON.DELIM, ",")`
+
 #### Vector{Dict}
 A dotted key name looks like
 
-| phones[0].number|
+| phones.[1,number]|
 | ----------------|
 | 123.456.7890|
 
@@ -86,23 +143,14 @@ and produces
 }]
 ```
 
-#### Vector{T} where T
-An embedded array key name looks like this and has ';' delimited values
+#### All of the above
+Now you know all the rules necessary to create any json data structure you want with just a column name
+some examples are
 
-| aliases[]
-| ----------------
-| stormagedden;bob
+deep.dict.vec() | deep.dict.dictarray[1,A] | deep.dict.dictarray[1,B(Float)] |
+----------------| ------------------------ | ------------------------------  | 
+100;200;300     | plain string             | 0.1;0.2;0.3                     |
 
-and produces
-
-```json
-[{
-  "aliases": [
-    "stormagedden",
-    "bob"
-  ]
-}]
-```
 
 #### Sumary
 A more complete row oriented example
@@ -136,7 +184,7 @@ would produce
     }
   }]
 ```
-You can do something similar in column oriented sheets. Note that indexed and flat arrays are added.
+You can do something similar in column oriented sheets. with `row_oriented = false` keyword argument. 
 
 firstName            | Jihad            | Marcus
 :------------------- | :--------------- | :-----------
@@ -144,14 +192,15 @@ firstName            | Jihad            | Marcus
 **address.street**   | 12 Beaver Court  | 16 Vail Rd
 **address.city**     | Snowmass         | Vail
 **address.state**    | CO               | CO
-**address.zip**      | 81615            | 81657
-**phones[0].type**   | home             | home
-**phones[0].number** | 123.456.7890     | 123.456.7891
-**phones[1].type**   | work             | work
-**phones[1].number** | 098.765.4321     | 098.765.4322
-**aliases[]**        | stormagedden;bob | mac;markie
+**address.zip()** | 81;615            | 81;657
+**phones[0,type]**   | home             | home
+**phones[0,number(Int)]** | 123;456;7890     | 123;456;7891
+**phones[1,type]**   | work             | work
+**phones[1,number(Int)]** | 098;765;4321     | 098;765;4322
+**aliases()**        | stormagedden;bob | mac;markie
 
 would produce
+
 
 ```json
 [
@@ -162,16 +211,16 @@ would produce
       "street": "12 Beaver Court",
       "city": "Snowmass",
       "state": "CO",
-      "zip": "81615"
+      "zip": ["81","615"]
     },
     "phones": [
       {
         "type": "home",
-        "number": "123.456.7890"
+        "number": [123, 456, 7890]
       },
       {
         "type": "work",
-        "number": "098.765.4321"
+        "number": [098, 765, 4321]
       }
     ],
     "aliases": [
@@ -186,16 +235,16 @@ would produce
       "street": "16 Vail Rd",
       "city": "Vail",
       "state": "CO",
-      "zip": "81657"
+      "zip": ["81", "657"]
     },
     "phones": [
       {
         "type": "home",
-        "number": "123.456.7891"
+        "number": [123, 456, 7891]
       },
       {
         "type": "work",
-        "number": "098.765.4322"
+        "number": [098, 765, 4322]
       }
     ],
     "aliases": [
