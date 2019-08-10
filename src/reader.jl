@@ -60,6 +60,7 @@ function XLSXWrapperMeta(cnames)
     jsonkeys = Array{Any}(undef, length(cnames))
     
     for (i, key) in enumerate(cnames)
+        key = string(key)
         jk = split(key, ".")
         # last key has Type info
         endkey, T = determine_datatype(jk[end])
@@ -153,15 +154,11 @@ mutable struct JSONWorksheet
     xlsxpath::String
     sheetname::String
 end
-function JSONWorksheet(arr::Array{T}, xlsxpath, sheet, create_dataframe = false) where T
-    missing_col = ismissing.(arr[1, :])
-    arr = arr[:, broadcast(!, missing_col)]
+function JSONWorksheet(arr::Array{T, 2}, xlsxpath, sheet, create_dataframe = false) where T
+    arr = dropmissing(arr)
 
-    missing_row = broadcast(r -> all(ismissing.(arr[r, :])), 1:size(arr, 1))
-    arr = arr[broadcast(!, missing_row), :]
-
-    meta = XLSXWrapperMeta(string.(arr[1, :]))
-    data = broadcast(i -> construct_dict(meta, arr[i, :]), 2:size(arr, 1))
+    meta = XLSXWrapperMeta(arr[1, :])
+    data = map(i -> construct_dict(meta, arr[i, :]), 2:size(arr, 1))
     data = collect_vecdict.(data)
 
     if create_dataframe
@@ -180,13 +177,11 @@ function JSONWorksheet(xf::XLSX.XLSXFile, sheet;
             rg = XLSX.get_dimension(ws)
             if row_oriented
                 rg = XLSX.CellRange(XLSX.CellRef(start_line, rg.start.column_number), rg.stop)
-                dt = ws[rg]
+                dt = dropmissing(ws[rg])
             else
                 rg = XLSX.CellRange(XLSX.CellRef(rg.start.row_number, start_line), rg.stop)
-                dt = permutedims(ws[rg])
+                dt = dropmissing(ws[rg]) |> permutedims
             end
-            dt[broadcast(i -> !all(ismissing.(dt[i, :])), 1:size(dt, 1)),
-               broadcast(j -> !ismissing(dt[1, j]), 1:size(dt, 2))]
         end
 
     @assert !isempty(ws) "$(sheet)!$start_line:$start_line does not contains any data, try change 'start_line=$start_line'"
@@ -199,9 +194,33 @@ function JSONWorksheet(xlsxpath, sheet; kwargs...)
     close(xf)
     return x
 end
+@inline function dropmissing(arr::Array{T, 2}) where T
+    cols = fill(false, size(arr, 2))
+    for c in 1:size(arr, 2)
+        for r in 1:size(arr, 1)
+            # There must be a column name, or it's a commet line
+            if r == 1 & ismissing(arr[r, c])
+                break
+            end
+            if !ismissing(arr[r, c])
+                cols[c] = true
+                break
+            end
+        end
+    end
+    rows = fill(false, size(arr, 1))
+    @inbounds for r in 1:size(arr, 1)
+        for c in 1:size(arr, 2)                
+            if !ismissing(arr[r, c])
+                rows[r] = true
+                break
+            end
+        end
+    end
+    return arr[rows, cols]
+end
 
-
-function construct_dict(meta::XLSXWrapperMeta, singlerow)
+@inline function construct_dict(meta::XLSXWrapperMeta, singlerow)
     result = Array{XLSXWrapperData, 1}(undef, length(meta))
     for (i, el) in enumerate(meta)
         T, steps = el[2]
@@ -231,7 +250,7 @@ function construct_dataframe(data)
     @assert length(k) == 1 "Column names are not same within rows, $k"
 
     v = Array{Any, 1}(undef, length(k[1]))
-    for (i, key) in enumerate(k[1])
+    @inbounds for (i, key) in enumerate(k[1])
         v[i] = getindex.(data, key)
     end
 
@@ -270,7 +289,7 @@ end
 
 # TODO 임시 함수임... 더 robust 하게 수정필요
 function Base.sort!(jws::JSONWorksheet, key; kwargs...)
-    sorted_idx = sortperm(broadcast(el -> el[key], data(jws)); kwargs...)
+    sorted_idx = sortperm(map(el -> el[key], data(jws)); kwargs...)
     jws.data = data(jws)[sorted_idx]
 end
 

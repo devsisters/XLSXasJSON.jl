@@ -2,7 +2,6 @@ using Test
 using XLSXasJSON
 using DataStructures
 using JSON
-using XLSX
 
 import XLSXasJSON.XLSXWrapperMeta
 import XLSXasJSON.XLSXWrapperData
@@ -115,3 +114,4 @@ end
     @test all(broadcast(el -> ismissing(el["AllNull"]), data))
     @test collect(keys(jws.data[1])) == ["Key", "Data", "AllNull"]
 end
+
