@@ -59,7 +59,7 @@ function XLSXWrapperMeta(cnames)
     map = OrderedDict{String, Any}()
     jsonkeys = Array{Any}(undef, length(cnames))
     
-    for (i, key) in enumerate(cnames)
+    @inbounds for (i, key) in enumerate(cnames)
         key = string(key)
         jk = split(key, ".")
         # last key has Type info
@@ -114,7 +114,7 @@ overwrites `Dict{K<:Integer,V} to Array{Dict, 1}` recursively
 """
 collect_vecdict(x) = x
 function collect_vecdict(x::T) where {T <: AbstractDict}
-    for k in keys(x)
+    @inbounds for k in keys(x)
         v = collect_vecdict(x[k])
         if isa(v, Array{T2, 1} where T2)
             # TODO T2 = @eval $(Symbol(T.name))
@@ -132,7 +132,7 @@ function collect_vecdict(x::AbstractDict{K,V}) where {K <: Integer, V}
     # remove Integer Key and filter missing
     r = collect(values(x))
     check_missing = Int[]
-    for (i, el) in enumerate(r)
+    @inbounds for (i, el) in enumerate(r)
         if all(ismissing.(values(el)))
             push!(check_missing, i)
         end
@@ -196,7 +196,7 @@ function JSONWorksheet(xlsxpath, sheet; kwargs...)
 end
 @inline function dropmissing(arr::Array{T, 2}) where T
     cols = fill(false, size(arr, 2))
-    for c in 1:size(arr, 2)
+    @inbounds for c in 1:size(arr, 2)
         for r in 1:size(arr, 1)
             # There must be a column name, or it's a commet line
             if r == 1 & ismissing(arr[r, c])
@@ -237,7 +237,7 @@ end
         
         x = XLSXWrapperData(steps[end], value)
         if length(steps) > 1
-            for k in reverse(steps[1:end-1])
+            @inbounds for k in reverse(steps[1:end-1])
                 x = XLSXWrapperData(k, x)
             end
         end
@@ -320,7 +320,7 @@ end
 # same kwargs for all sheets
 function JSONWorkbook(xf::XLSX.XLSXFile, sheets = XLSX.sheetnames(xf); kwargs...)
     v = Array{JSONWorksheet, 1}(undef, length(sheets))
-    for (i, s) in enumerate(sheets)
+    @inbounds for (i, s) in enumerate(sheets)
         v[i] = JSONWorksheet(xf, s; kwargs...)
     end
     close(xf)
@@ -332,7 +332,7 @@ function JSONWorkbook(xlsxpath::AbstractString, sheets, kwargs_per_sheet::Dict)
     xf = XLSX.readxlsx(xlsxpath)
 
     v = Array{JSONWorksheet, 1}(undef, length(sheets))
-    for (i, s) in enumerate(sheets)
+    @inbounds for (i, s) in enumerate(sheets)
         v[i] = JSONWorksheet(xf, s; kwargs_per_sheet[s]...)
     end
     close(xf)
@@ -340,7 +340,7 @@ function JSONWorkbook(xlsxpath::AbstractString, sheets, kwargs_per_sheet::Dict)
     JSONWorkbook(xf, v)
 end
 function construct_dataframe!(jwb::JSONWorkbook) 
-    for i in 1:length(jwb) 
+    @inbounds for i in 1:length(jwb) 
         construct_dataframe!(jwb[i])
     end
 end
