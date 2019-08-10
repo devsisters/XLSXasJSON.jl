@@ -1,11 +1,13 @@
 """
     Able to use other string as delimiter by changing values of `DELIM`
 push!(XLSXasJSON.DELIM, ",")
+
 """
 const DELIM = [";"]
 
 const VEC_REGEX = r"\((.*?)\)" # key(), key(T)
 const VECDICT_REGEX = r"\[(.*?)\]" # [idx,key]
+
 function determine_datatype(k)::Tuple
     # [idx,key]
     TV = Any
@@ -55,17 +57,21 @@ function XLSXWrapperMeta(cnames)
     @assert allunique(cnames) "Column names must be unique, check for duplication in \n$cnames"
 
     map = OrderedDict{String, Any}()
-    for k in cnames
-        name = split(k, ".")
+    jsonkeys = Array{Any}(undef, length(cnames))
+    
+    for (i, key) in enumerate(cnames)
+        jk = split(key, ".")
         # last key has Type info
-        nameend, T = determine_datatype(name[end])
-        if isa(nameend, Array)
-            name = [name[1:end-1]; nameend]
+        endkey, T = determine_datatype(jk[end])
+        if isa(endkey, Array)
+            jk = [jk[1:end-1]; endkey]
         else
-            name[end] = nameend
+            jk[end] = endkey
         end
-        map[k] = (T, name)
+        jsonkeys[i] = jk
+        map[key] = (T, jk)
     end
+    @assert allunique(jsonkeys) "Nested JSON keys must be unique, check for duplication within \n$jsonkeys"
 
     XLSXWrapperMeta(map)
 end
@@ -111,6 +117,7 @@ function collect_vecdict(x::T) where {T <: AbstractDict}
         v = collect_vecdict(x[k])
         if isa(v, Array{T2, 1} where T2)
             # TODO T2 = @eval $(Symbol(T.name))
+            sort!(x[k]) #sort by Key
             nd = OrderedDict(Pair(k, collect_vecdict(x[k])))
             x = merge(x, nd)
         else
@@ -181,6 +188,7 @@ function JSONWorksheet(xf::XLSX.XLSXFile, sheet;
             dt[broadcast(i -> !all(ismissing.(dt[i, :])), 1:size(dt, 1)),
                broadcast(j -> !ismissing(dt[1, j]), 1:size(dt, 2))]
         end
+
     @assert !isempty(ws) "$(sheet)!$start_line:$start_line does not contains any data, try change 'start_line=$start_line'"
 
     JSONWorksheet(ws, xf.filepath, sheet)
@@ -219,8 +227,9 @@ function construct_dict(meta::XLSXWrapperMeta, singlerow)
     return recursive_merge(result)
 end
 function construct_dataframe(data)
-    k = unique(keys.(data))
-    @assert length(k) == 1 "something is wrong at $k"
+    k = unique(keys.(data))    
+    @assert length(k) == 1 "Column names are not same within rows, $k"
+
     v = Array{Any, 1}(undef, length(k[1]))
     for (i, key) in enumerate(k[1])
         v[i] = getindex.(data, key)
@@ -234,9 +243,14 @@ end
 
 data(jws::JSONWorksheet) = getfield(jws, :data)
 df(jws::JSONWorksheet) = getfield(jws, :dataframe)
-
 xlsxpath(jws::JSONWorksheet) = getfield(jws, :xlsxpath)
 sheetnames(jws::JSONWorksheet) = getfield(jws, :sheetname)
+
+Base.size(jws::JSONWorksheet) = (length(jws.data), length(jws.meta))
+function Base.size(jws::JSONWorksheet, d)
+    d == 1 ? length(jws.data) : 
+    d == 2 ? length(jws.meta) : throw(DimensionMismatch("only 2 dimensions of `JSONWorksheets` object are measurable"))
+end
 
 function Base.merge(a::JSONWorksheet, b::JSONWorksheet, bykey)
     @assert haskey(a.meta, bykey) "JSONWorksheet-$(a.sheetname) do not has `$bykey`"
@@ -370,24 +384,29 @@ function Base.show(io::IO, jwb::JSONWorkbook)
     @printf(io, "%6s %-15s\n", "index", "name")
     println(io, "-"^(6+1+15+1))
 
-    for el in jwb.sheetindex.lookup
+    index = sort(jwb.sheetindex.lookup; byvalue = true)
+    for el in index
         name = string(el[1])
         @printf(io, "%6s %-15s\n", el[2], string(el[1]))
     end
 end
-function Base.summary(jws::JSONWorksheet)
-    @sprintf("%d×%d %s - %s!%s", size(jws)..., "JSONWorksheet", basename(xlsxpath(jws)), sheetnames(jws))
+function Base.summary(io::IO, jws::JSONWorksheet)
+    @printf("%d×%d %s - %s!%s\n", size(jws)..., "JSONWorksheet", 
+        basename(xlsxpath(jws)), sheetnames(jws))
 end
 function Base.show(io::IO, jws::JSONWorksheet)
     summary(io, jws)
-    show(io, df(jws))
+    if ismissing(df(jws))
+        #TODO truncate based on screen size
+        x = data(jws)
+        print(io, "row 1 => ")
+        print(io, JSON.json(x[1], 1))
+        if length(x) > 1
+            print("...")
+            print(io, "row $(length(x)) => ")
+            print(io, JSON.json(x[end]))
+        end
+    else
+        display(df(jws))
+    end
 end
-# TODO: Need to change this fucntion to override only JSONWorksheet, not OrderedDict itself
-# see base/show.jl:73l
-# function Base.show(io::IO, x::OrderedDict)
-#     for (i, (k, v)) in enumerate(x)
-#         print(io, "{", k, ": ")
-#         print(io, v, "}")
-#         i < length(x) && print(io, ", ")
-#     end
-# end
