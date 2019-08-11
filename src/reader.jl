@@ -154,18 +154,15 @@ mutable struct JSONWorksheet
     xlsxpath::String
     sheetname::String
 end
-function JSONWorksheet(arr::Array{T, 2}, xlsxpath, sheet, create_dataframe = false) where T
+function JSONWorksheet(arr::Array{T, 2}, xlsxpath, sheet) where T
     arr = dropmissing(arr)
+    @assert !isempty(arr) "$(xlsxpath)!$(sheet) does not contains any data, try change optional argument'start_line'"
 
     meta = XLSXWrapperMeta(arr[1, :])
     data = map(i -> construct_dict(meta, arr[i, :]), 2:size(arr, 1))
     data = collect_vecdict.(data)
+    dataframe = missing
 
-    if create_dataframe
-        dataframe = construct_dataframe(data) 
-    else
-        dataframe = missing
-    end    
     JSONWorksheet(meta, data, dataframe, xlsxpath, string(sheet))
 end
 function JSONWorksheet(xf::XLSX.XLSXFile, sheet;
@@ -177,14 +174,12 @@ function JSONWorksheet(xf::XLSX.XLSXFile, sheet;
             rg = XLSX.get_dimension(ws)
             if row_oriented
                 rg = XLSX.CellRange(XLSX.CellRef(start_line, rg.start.column_number), rg.stop)
-                dt = dropmissing(ws[rg])
+                dt = ws[rg]
             else
                 rg = XLSX.CellRange(XLSX.CellRef(rg.start.row_number, start_line), rg.stop)
-                dt = dropmissing(ws[rg]) |> permutedims
+                dt = permutedims(ws[rg])
             end
         end
-
-    @assert !isempty(ws) "$(sheet)!$start_line:$start_line does not contains any data, try change 'start_line=$start_line'"
 
     JSONWorksheet(ws, xf.filepath, sheet)
 end
@@ -195,20 +190,20 @@ function JSONWorksheet(xlsxpath, sheet; kwargs...)
     return x
 end
 @inline function dropmissing(arr::Array{T, 2}) where T
-    cols = fill(false, size(arr, 2))
+    cols = falses(size(arr, 2))
     @inbounds for c in 1:size(arr, 2)
-        for r in 1:size(arr, 1)
-            # There must be a column name, or it's a commet line
-            if r == 1 & ismissing(arr[r, c])
-                break
-            end
-            if !ismissing(arr[r, c])
-                cols[c] = true
-                break
+        # There must be a column name, or it's a commet line
+        if !ismissing(arr[1, c])
+            for r in 1:size(arr, 1)
+                if !ismissing(arr[r, c])
+                    cols[c] = true
+                    break
+                end
             end
         end
     end
-    rows = fill(false, size(arr, 1))
+
+    rows = falses(size(arr, 1))
     @inbounds for r in 1:size(arr, 1)
         for c in 1:size(arr, 2)                
             if !ismissing(arr[r, c])
