@@ -12,6 +12,7 @@ function determine_datatype(k)::Tuple
     # [idx,key]
     TV = Any
     if occursin(VECDICT_REGEX, k)
+        # TODO: provide error messaqge for missing "." key[1,key2]
         k = chop(k; head=1, tail=1) #remove []
         k = split(k, ",")
         @assert length(k) == 2 "Specify index of Vector{Dict} data in $(k)"

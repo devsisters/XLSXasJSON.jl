@@ -54,16 +54,17 @@ produces
 #### Dict
 A dotted key name looks like
 
-| address.street|
-| ---------------|
-| 12 Beaver Court|
+| color.name|color.value|
+| ----------|-----------|
+| red       |#f00       |
 
 and produces
 
 ```json
 [{
-  "address": {
-    "street": "12 Beaver Court"
+  "color": {
+    "name": "red",
+    "value": "#f00"
     }
 }]
 ```
@@ -95,7 +96,7 @@ and produces
 
 
 #### Vector{T} where T
-An embedded array key name looks like this and has ';' delimited values. You can also decide datatype in array
+An embedded array key name looks like this and has ';' delimited values. You can also decide DataType of array
 
 | array()    |array_int(Int)|array_float(float)|
 | ------------| ------------ | ------------|
@@ -122,7 +123,6 @@ and produces
   ]
 }]
 ```
-You can add delim string with `push!(XLSXasJSON.DELIM, ",")`
 
 #### Vector{Dict}
 A dotted key name looks like
@@ -142,113 +142,46 @@ and produces
 ```
 
 #### All of the above
+
 Now you know all the rules necessary to create any json data structure you want with just a column name
-some examples are
+This is a more complete row oriented example
 
-deep.dict.vec() | deep.dict.dictarray[1,A] | deep.dict.dictarray[1,B(Float)] |
-----------------| ------------------------ | ------------------------------  | 
-100;200;300     | plain string             | 0.1;0.2;0.3                     |
-
-
-#### Sumary
-A more complete row oriented example
-
-firstName | lastName | address.street  | address.city | address.state | address.zip
---------- | -------- | --------------- | ------------ | ------------- | -----------
-Jihad     | Saladin  | 12 Beaver Court | Snowmass     | CO            | 81615
-Marcus    | Rivapoli | 16 Vail Rd      | Vail         | CO            | 81657
+| a.b | a.b2(Int) | a.b3.[1,Type] | a.b3.[1,Amount] | a.b3.[2,Type] | a.b3.[2,Amount] | a.b3.[3,Type] | a.b3.[3,Amount()] |
+|------------------|-------------|------|---|------------|---|-----------|-----------|
+| Fooood | 100;200;300 | Cake | 50 | Chocolate | 19 | Ingredient | Salt;100 |
 
 would produce
-
-```json
-[{
-    "firstName": "Jihad",
-    "lastName": "Saladin",
-    "address": {
-      "street": "12 Beaver Court",
-      "city": "Snowmass",
-      "state": "CO",
-      "zip": "81615"
-    }
-  },
-  {
-    "firstName": "Marcus",
-    "lastName": "Rivapoli",
-    "address": {
-      "street": "16 Vail Rd",
-      "city": "Vail",
-      "state": "CO",
-      "zip": "81657"
-    }
-  }]
-```
-You can do something similar in column oriented sheets. with `row_oriented = false` keyword argument. 
-
-firstName            | Jihad            | Marcus
-:------------------- | :--------------- | :-----------
-**lastName**         | Saladin          | Rivapoli
-**address.street**   | 12 Beaver Court  | 16 Vail Rd
-**address.city**     | Snowmass         | Vail
-**address.state**    | CO               | CO
-**address.zip()** | 81;615            | 81;657
-**phones[0,type]**   | home             | home
-**phones[0,number(Int)]** | 123;456;7890     | 123;456;7891
-**phones[1,type]**   | work             | work
-**phones[1,number(Int)]** | 098;765;4321     | 098;765;4322
-**aliases()**        | stormagedden;bob | mac;markie
-
-would produce
-
 
 ```json
 [
   {
-    "firstName": "Jihad",
-    "lastName": "Saladin",
-    "address": {
-      "street": "12 Beaver Court",
-      "city": "Snowmass",
-      "state": "CO",
-      "zip": ["81","615"]
-    },
-    "phones": [
-      {
-        "type": "home",
-        "number": [123, 456, 7890]
-      },
-      {
-        "type": "work",
-        "number": [098, 765, 4321]
-      }
-    ],
-    "aliases": [
-      "stormagedden",
-      "bob"
-    ]
-  },
-  {
-    "firstName": "Marcus",
-    "lastName": "Rivapoli",
-    "address": {
-      "street": "16 Vail Rd",
-      "city": "Vail",
-      "state": "CO",
-      "zip": ["81", "657"]
-    },
-    "phones": [
-      {
-        "type": "home",
-        "number": [123, 456, 7891]
-      },
-      {
-        "type": "work",
-        "number": [098, 765, 4322]
-      }
-    ],
-    "aliases": [
-      "mac",
-      "markie"
-    ]
+    "a": {
+      "b": "Fooood",
+      "b2": [
+        100,
+        200,
+        300
+      ],
+      "b3": [
+        {
+          "Type": "Cake",
+          "Amount": 50
+        },
+        {
+          "Type": "Chocolate",
+          "Amount": 19
+        },
+        {
+          "Type": "Ingredient",
+          "Amount": [
+            "Salt",
+            "100"
+          ]
+        }
+      ]
+    }
   }
 ]
+
 ```
+You can do same with column oriented sheets. with `row_oriented = false` keyword argument. 
