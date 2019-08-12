@@ -119,7 +119,6 @@ function collect_vecdict(x::T) where {T <: AbstractDict}
         v = collect_vecdict(x[k])
         if isa(v, Array{T2, 1} where T2)
             # TODO T2 = @eval $(Symbol(T.name))
-            sort!(x[k]) #sort by Key
             nd = OrderedDict(Pair(k, collect_vecdict(x[k])))
             x = merge(x, nd)
         else
@@ -130,11 +129,12 @@ function collect_vecdict(x::T) where {T <: AbstractDict}
 end
 
 function collect_vecdict(x::AbstractDict{K,V}) where {K <: Integer, V}
-    # remove Integer Key and filter missing
+    # sort by IntegerKey and dropmissing 
+    sort!(x)
     r = collect(values(x))
     check_missing = Int[]
     @inbounds for (i, el) in enumerate(r)
-        if all(ismissing.(values(el)))
+        if all(ismissing.(values(el))) 
             push!(check_missing, i)
         end
     end
@@ -204,6 +204,7 @@ end
         end
     end
 
+    arr = arr[:, cols]
     rows = falses(size(arr, 1))
     @inbounds for r in 1:size(arr, 1)
         for c in 1:size(arr, 2)                
@@ -213,7 +214,7 @@ end
             end
         end
     end
-    return arr[rows, cols]
+    return arr[rows, :]
 end
 
 @inline function construct_dict(meta::XLSXWrapperMeta, singlerow)
@@ -283,6 +284,11 @@ function Base.merge(a::JSONWorksheet, b::JSONWorksheet, bykey)
     end
     meta = merge(a.meta, b.meta)
     JSONWorksheet(meta, output, missing, a.xlsxpath, a.sheetname)
+end
+function Base.append!(a::JSONWorksheet, b::JSONWorksheet)
+    @assert keys(a.meta) == keys(b.meta) "Column names must be same for append!\n $(setdiff(keys(a.meta), keys(b.meta)))"
+
+    append!(a.data, b.data)
 end
 
 # TODO 임시 함수임... 더 robust 하게 수정필요
