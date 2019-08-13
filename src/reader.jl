@@ -103,10 +103,26 @@ function Base.convert(::Type{T}, x::XLSXWrapperData{T2}) where {T<:AbstractDict,
     T(Pair(x.key, convert(T, x.value)))
 end
 
-function recursive_merge(XLSXWrapperData...)
-    recursive_merge(convert.(OrderedDict, XLSXWrapperData...)...)
+Base.iterate(x::XLSXWrapperData) = iterate(x, 1)
+Base.iterate(x::XLSXWrapperData, i) = i > length(1) ? nothing : Pair(x.key, x.value)
+
+Base.keytype(x::XLSXWrapperData) = typeof(x.key)
+Base.valtype(x::XLSXWrapperData{T}) where T = T
+
+recursive_merge(x::XLSXWrapperData) = convert(OrderedDict, x)
+function recursive_merge(d::XLSXWrapperData, others::XLSXWrapperData...)
+    # K = Base.promoteK(keytype(d), others...)
+    # key_types = unique([keytype(d); vcat(keytype.(others)...)])
+
+    # val_types = unique([valtype(d); vcat(valtype.(others)...)])                                   
+    # V = length(val_types) == 1 ? val_types[1] : Any
+
+    merge(recursive_merge, 
+            convert(OrderedDict, d), 
+             convert.(OrderedDict, others)...)
 end
 recursive_merge(x::AbstractDict...) = merge(recursive_merge, x...)
+recursive_merge(d::AbstractDict, x::AbstractDict...) = merge(recursive_merge, d, x...)
 
 """
     collect_vecdict!(x::T) where {T <: AbstractDict}
@@ -240,7 +256,7 @@ end
         end
         result[i] = x
     end
-    return recursive_merge(result)
+    return recursive_merge(result...)
 end
 function construct_dataframe(data)
     k = unique(keys.(data))    
