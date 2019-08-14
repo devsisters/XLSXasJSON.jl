@@ -258,6 +258,10 @@ end
     end
     return recursive_merge(result...)
 end
+
+
+#################################
+# TODO: 삭제 예정
 function construct_dataframe(data)
     k = unique(keys.(data))    
     @assert length(k) == 1 "Column names are not same within rows, $k"
@@ -272,9 +276,10 @@ end
 function construct_dataframe!(jws::JSONWorksheet)
     jws.dataframe = construct_dataframe(jws.data)
 end
+df(jws::JSONWorksheet) = getfield(jws, :dataframe)
+#################################
 
 data(jws::JSONWorksheet) = getfield(jws, :data)
-df(jws::JSONWorksheet) = getfield(jws, :dataframe)
 xlsxpath(jws::JSONWorksheet) = getfield(jws, :xlsxpath)
 sheetnames(jws::JSONWorksheet) = getfield(jws, :sheetname)
 
@@ -283,6 +288,8 @@ function Base.size(jws::JSONWorksheet, d)
     d == 1 ? length(jws.data) : 
     d == 2 ? length(jws.meta) : throw(DimensionMismatch("only 2 dimensions of `JSONWorksheets` object are measurable"))
 end
+Base.getindex(jws::JSONWorksheet, i) = getindex(data(jws), i)
+
 
 function Base.merge(a::JSONWorksheet, b::JSONWorksheet, bykey)
     @assert haskey(a.meta, bykey) "JSONWorksheet-$(a.sheetname) do not has `$bykey`"
@@ -321,12 +328,12 @@ Preserves XLSX WorkBook data structure
 mutable struct JSONWorkbook
     package::XLSX.XLSXFile
     sheets::Vector{JSONWorksheet}
-    sheetindex::DataFrames.Index
+    sheetindex::Index
 end
 
 function JSONWorkbook(xf::XLSX.XLSXFile, v::Vector{JSONWorksheet})
-    wsnames = Symbol.(sheetnames.(v))
-    index = DataFrames.Index(wsnames)
+    wsnames = sheetnames.(v)
+    index = Index(wsnames)
     JSONWorkbook(xf, v, index)
 end
 function JSONWorkbook(xlsxpath, sheets; kwargs...)
@@ -366,42 +373,33 @@ function construct_dataframe!(jwb::JSONWorkbook)
 end
 # JSONWorkbook fallback functions
 hassheet(jwb::JSONWorkbook, s::Symbol) = haskey(jwb.sheetindex, s)
-getsheet(jwb::JSONWorkbook, i) = jwb.sheets[i]
-getsheet(jwb::JSONWorkbook, s::Symbol) = getsheet(jwb, jwb.sheetindex[s])
 sheetnames(jwb::JSONWorkbook) = names(jwb.sheetindex)
-
 xlsxpath(jwb::JSONWorkbook) = jwb.package.filepath
 
 XLSX.isopen(jwb::JSONWorkbook) = isopen(jwb.package)
 XLSX.close(jwb::JSONWorkbook) = close(jwb.package)
 
+getsheet(jwb::JSONWorkbook, i) = jwb.sheets[i]
+getsheet(jwb::JSONWorkbook, s::AbstractString) = getsheet(jwb, jwb.sheetindex[s])
+getsheet(jwb::JSONWorkbook, s::Symbol) = getsheet(jwb, jwb.sheetindex[string(s)])
+Base.getindex(jwb::JSONWorkbook, i::UnitRange) = getsheet(jwb, i)
+Base.getindex(jwb::JSONWorkbook, i::Integer) = getsheet(jwb, i)
+Base.getindex(jwb::JSONWorkbook, s::AbstractString) = getsheet(jwb, s)
+Base.getindex(jwb::JSONWorkbook, s::Symbol) = getsheet(jwb, string(s))
+
 Base.length(jwb::JSONWorkbook) = length(jwb.sheets)
 Base.lastindex(jwb::JSONWorkbook) = length(jwb.sheets)
-
-Base.getindex(jwb::JSONWorkbook, i::Integer) = getsheet(jwb, i)
-Base.getindex(jwb::JSONWorkbook, s::Symbol) = getsheet(jwb, s)
-Base.getindex(jwb::JSONWorkbook, i::UnitRange) = getsheet(jwb, i)
-
 Base.setindex!(jwb::JSONWorkbook, jws::JSONWorksheet, i1::Int) = setindex!(jwb.sheets, jws, i1)
 Base.setindex!(jwb::JSONWorkbook, jws::JSONWorksheet, s::Symbol) = setindex!(jwb.sheets, jws, jwb.sheetindex[s])
 
-
-# TODO: need to make it more cleaner!
-function Base.setindex!(jwb::JSONWorkbook, df::DataFrame, i1::Int)
-    new_jws = JSONWorksheet(df, xlsxpath(jwb), sheetnames(jwb)[i1])
-    setindex!(jwb, new_jws, i1)
-end
-function Base.setindex!(jwb::JSONWorkbook, df::DataFrame, s::Symbol)
-    new_jws = JSONWorksheet(df, xlsxpath(jwb), s)
-    setindex!(jwb, new_jws, s)
-end
 function Base.deleteat!(jwb::JSONWorkbook, i::Integer)
     deleteat!(getfield(jwb, :sheets), i)
-    s = Symbol.(sheetnames.(getfield(jwb, :sheets)))
-    setfield!(jwb, :sheetindex, DataFrames.Index(s))
+    s = sheetnames.(getfield(jwb, :sheets))
+    setfield!(jwb, :sheetindex, Index(s))
     jwb
 end
-function Base.deleteat!(jwb::JSONWorkbook, sheet::Symbol)
+Base.deleteat!(jwb::JSONWorkbook, sheet::Symbol) = deleteat!(jwb, string(sheet))
+function Base.deleteat!(jwb::JSONWorkbook, sheet::AbstractString)
     i = getfield(jwb, :sheetindex)[sheet]
     deleteat!(jwb, i)
 end
@@ -409,6 +407,7 @@ end
 Base.iterate(jwb::JSONWorkbook) = iterate(jwb, 1)
 function Base.iterate(jwb::JSONWorkbook, st)
     st > length(jwb) && return nothing
+    # TODO deprecate df
     return (df(jwb[st]), st + 1)
 end
 

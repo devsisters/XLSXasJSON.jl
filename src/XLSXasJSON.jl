@@ -5,8 +5,8 @@ using JSON
 using XLSX
 using DataStructures
 using DataFrames
-import DataFrames.AbstractDataFrame
 
+include("index.jl")
 include("reader.jl")
 include("writer.jl")
 

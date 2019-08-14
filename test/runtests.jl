@@ -6,7 +6,7 @@ using JSON
 import XLSXasJSON.XLSXWrapperMeta
 import XLSXasJSON.XLSXWrapperData
 
-data_path = joinpath(@__DIR__, "test/data")
+data_path = joinpath(@__DIR__, "data")
 
 @testset "Datatype decision" begin
     data = ["a" "b()" "c(Int)" "d(Float)"]
