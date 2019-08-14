@@ -167,7 +167,6 @@ end
 mutable struct JSONWorksheet
     meta
     data
-    dataframe::Union{DataFrame, Missing} # for datahandling like Excel spreadsheet
     xlsxpath::String
     sheetname::String
 end
@@ -178,9 +177,8 @@ function JSONWorksheet(arr::Array{T, 2}, xlsxpath, sheet) where T
     meta = XLSXWrapperMeta(arr[1, :])
     data = map(i -> construct_dict(meta, arr[i, :]), 2:size(arr, 1))
     data = collect_vecdict.(data)
-    dataframe = missing
 
-    JSONWorksheet(meta, data, dataframe, xlsxpath, string(sheet))
+    JSONWorksheet(meta, data, xlsxpath, string(sheet))
 end
 function JSONWorksheet(xf::XLSX.XLSXFile, sheet;
                        start_line=1, row_oriented=true)
@@ -258,26 +256,6 @@ end
     end
     return recursive_merge(result...)
 end
-
-
-#################################
-# TODO: 삭제 예정
-function construct_dataframe(data)
-    k = unique(keys.(data))    
-    @assert length(k) == 1 "Column names are not same within rows, $k"
-
-    v = Array{Any, 1}(undef, length(k[1]))
-    @inbounds for (i, key) in enumerate(k[1])
-        v[i] = getindex.(data, key)
-    end
-
-    return DataFrame(v, Symbol.(k[1]))
-end
-function construct_dataframe!(jws::JSONWorksheet)
-    jws.dataframe = construct_dataframe(jws.data)
-end
-df(jws::JSONWorksheet) = getfield(jws, :dataframe)
-#################################
 
 data(jws::JSONWorksheet) = getfield(jws, :data)
 xlsxpath(jws::JSONWorksheet) = getfield(jws, :xlsxpath)
@@ -390,7 +368,8 @@ Base.getindex(jwb::JSONWorkbook, s::Symbol) = getsheet(jwb, string(s))
 Base.length(jwb::JSONWorkbook) = length(jwb.sheets)
 Base.lastindex(jwb::JSONWorkbook) = length(jwb.sheets)
 Base.setindex!(jwb::JSONWorkbook, jws::JSONWorksheet, i1::Int) = setindex!(jwb.sheets, jws, i1)
-Base.setindex!(jwb::JSONWorkbook, jws::JSONWorksheet, s::Symbol) = setindex!(jwb.sheets, jws, jwb.sheetindex[s])
+Base.setindex!(jwb::JSONWorkbook, jws::JSONWorksheet, s::Symbol) = setindex!(jwb, jws, string(s))
+Base.setindex!(jwb::JSONWorkbook, jws::JSONWorksheet, s::AbstractString) = setindex!(jwb.sheets, jws, jwb.sheetindex[s])
 
 function Base.deleteat!(jwb::JSONWorkbook, i::Integer)
     deleteat!(getfield(jwb, :sheets), i)
@@ -434,17 +413,13 @@ function Base.summary(io::IO, jws::JSONWorksheet)
 end
 function Base.show(io::IO, jws::JSONWorksheet)
     summary(io, jws)
-    if ismissing(df(jws))
-        #TODO truncate based on screen size
-        x = data(jws)
-        print(io, "row 1 => ")
-        print(io, JSON.json(x[1], 1))
-        if length(x) > 1
-            print("...")
-            print(io, "row $(length(x)) => ")
-            print(io, JSON.json(x[end]))
-        end
-    else
-        display(df(jws))
+    #TODO truncate based on screen size
+    x = data(jws)
+    print(io, "row 1 => ")
+    print(io, JSON.json(x[1], 1))
+    if length(x) > 1
+        print("...")
+        print(io, "row $(length(x)) => ")
+        print(io, JSON.json(x[end]))
     end
 end

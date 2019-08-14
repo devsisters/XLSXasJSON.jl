@@ -4,15 +4,13 @@ using Printf
 using JSON
 using XLSX
 using DataStructures
-using DataFrames
 
 include("index.jl")
 include("reader.jl")
 include("writer.jl")
 
-export JSONWorkbook, JSONWorksheet, construct_dataframe!,
+export JSONWorkbook, JSONWorksheet,
         hassheet, sheetnames,
-        xlsxpath, dropnull,
-        df
+        xlsxpath, dropnull
 
 end # module
