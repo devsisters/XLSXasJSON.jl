@@ -165,8 +165,8 @@ end
 ################################################
 
 mutable struct JSONWorksheet
-    meta
-    data
+    meta::XLSXWrapperMeta
+    data::Array{T, 1} where T <: AbstractDict
     xlsxpath::String
     sheetname::String
 end
@@ -284,7 +284,7 @@ function Base.merge(a::JSONWorksheet, b::JSONWorksheet, bykey)
         end
     end
     meta = merge(a.meta, b.meta)
-    JSONWorksheet(meta, output, missing, a.xlsxpath, a.sheetname)
+    JSONWorksheet(meta, output, a.xlsxpath, a.sheetname)
 end
 function Base.append!(a::JSONWorksheet, b::JSONWorksheet)
     @assert keys(a.meta) == keys(b.meta) "Column names must be same for append!\n $(setdiff(keys(a.meta), keys(b.meta)))"
@@ -387,7 +387,7 @@ Base.iterate(jwb::JSONWorkbook) = iterate(jwb, 1)
 function Base.iterate(jwb::JSONWorkbook, st)
     st > length(jwb) && return nothing
     # TODO deprecate df
-    return (df(jwb[st]), st + 1)
+    return (jwb[st], st + 1)
 end
 
 ## Display
