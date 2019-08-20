@@ -267,6 +267,7 @@ function Base.size(jws::JSONWorksheet, d)
     d == 2 ? length(jws.meta) : throw(DimensionMismatch("only 2 dimensions of `JSONWorksheets` object are measurable"))
 end
 Base.getindex(jws::JSONWorksheet, i) = getindex(data(jws), i)
+Base.getindex(jws::JSONWorksheet, i1::Int, i2::Int, I::Int...) = getindex(data(jws), i1, i2, I...)
 
 
 function Base.merge(a::JSONWorksheet, b::JSONWorksheet, bykey)
