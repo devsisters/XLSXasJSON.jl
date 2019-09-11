@@ -172,7 +172,7 @@ mutable struct JSONWorksheet
     data::Array{T, 1} where T <: AbstractDict
     sheetname::String
 end
-function JSONWorksheet(arr::Array{T, 2}, xlsxpath, sheet) where T
+function JSONWorksheet(xlsxpath, arr::Array{T, 2}, sheet) where T
     arr = dropmissing(arr)
     @assert !isempty(arr) "$(xlsxpath)!$(sheet) does not contains any data, try change optional argument'start_line'"
 
@@ -198,7 +198,7 @@ function JSONWorksheet(xf::XLSX.XLSXFile, sheet;
             end
         end
 
-    JSONWorksheet(ws, xf.filepath, sheet)
+    JSONWorksheet(xf.filepath, ws, sheet)
 end
 function JSONWorksheet(xlsxpath, sheet; kwargs...)
     xf = XLSX.readxlsx(xlsxpath)
