@@ -347,11 +347,7 @@ function JSONWorkbook(xlsxpath::AbstractString, sheets, kwargs_per_sheet::Dict)
 
     JSONWorkbook(xf, v)
 end
-function construct_dataframe!(jwb::JSONWorkbook) 
-    @inbounds for i in 1:length(jwb) 
-        construct_dataframe!(jwb[i])
-    end
-end
+
 # JSONWorkbook fallback functions
 hassheet(jwb::JSONWorkbook, s::Symbol) = haskey(jwb.sheetindex, s)
 sheetnames(jwb::JSONWorkbook) = names(jwb.sheetindex)
