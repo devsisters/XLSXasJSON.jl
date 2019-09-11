@@ -167,9 +167,9 @@ end
 ################################################
 
 mutable struct JSONWorksheet
+    xlsxpath::String
     meta::XLSXWrapperMeta
     data::Array{T, 1} where T <: AbstractDict
-    xlsxpath::String
     sheetname::String
 end
 function JSONWorksheet(arr::Array{T, 2}, xlsxpath, sheet) where T
@@ -180,7 +180,7 @@ function JSONWorksheet(arr::Array{T, 2}, xlsxpath, sheet) where T
     data = map(i -> construct_dict(meta, arr[i, :]), 2:size(arr, 1))
     data = collect_vecdict.(data)
 
-    JSONWorksheet(meta, data, xlsxpath, string(sheet))
+    JSONWorksheet(xlsxpath, meta, data, string(sheet))
 end
 function JSONWorksheet(xf::XLSX.XLSXFile, sheet;
                        start_line=1, row_oriented=true)
@@ -271,7 +271,6 @@ end
 Base.getindex(jws::JSONWorksheet, i) = getindex(data(jws), i)
 Base.getindex(jws::JSONWorksheet, i1::Int, i2::Int, I::Int...) = getindex(data(jws), i1, i2, I...)
 
-
 function Base.merge(a::JSONWorksheet, b::JSONWorksheet, bykey)
     @assert haskey(a.meta, bykey) "JSONWorksheet-$(a.sheetname) do not has `$bykey`"
     @assert haskey(b.meta, bykey) "JSONWorksheet-$(b.sheetname) do not has `$bykey`"
@@ -307,7 +306,7 @@ end
 Preserves XLSX WorkBook data structure
 """
 mutable struct JSONWorkbook
-    package::XLSX.XLSXFile
+    xlsxpath::AbstractString
     sheets::Vector{JSONWorksheet}
     sheetindex::Index
 end
@@ -315,15 +314,7 @@ end
 function JSONWorkbook(xf::XLSX.XLSXFile, v::Vector{JSONWorksheet})
     wsnames = sheetnames.(v)
     index = Index(wsnames)
-    JSONWorkbook(xf, v, index)
-end
-function JSONWorkbook(xlsxpath, sheets; kwargs...)
-    xf = XLSX.readxlsx(xlsxpath)
-    JSONWorkbook(xf, sheets; kwargs...)
-end
-function JSONWorkbook(xlsxpath; kwargs...)
-    xf = XLSX.readxlsx(xlsxpath)
-    JSONWorkbook(xf; kwargs...)
+    JSONWorkbook(xf.filepath, v, index)
 end
 # same kwargs for all sheets
 function JSONWorkbook(xf::XLSX.XLSXFile, sheets = XLSX.sheetnames(xf); kwargs...)
@@ -347,14 +338,19 @@ function JSONWorkbook(xlsxpath::AbstractString, sheets, kwargs_per_sheet::Dict)
 
     JSONWorkbook(xf, v)
 end
+function JSONWorkbook(xlsxpath, sheets; kwargs...)
+    xf = XLSX.readxlsx(xlsxpath)
+    JSONWorkbook(xf, sheets; kwargs...)
+end
+function JSONWorkbook(xlsxpath; kwargs...)
+    xf = XLSX.readxlsx(xlsxpath)
+    JSONWorkbook(xf; kwargs...)
+end
 
 # JSONWorkbook fallback functions
 hassheet(jwb::JSONWorkbook, s::Symbol) = haskey(jwb.sheetindex, s)
 sheetnames(jwb::JSONWorkbook) = names(jwb.sheetindex)
-xlsxpath(jwb::JSONWorkbook) = jwb.package.filepath
-
-XLSX.isopen(jwb::JSONWorkbook) = isopen(jwb.package)
-XLSX.close(jwb::JSONWorkbook) = close(jwb.package)
+xlsxpath(jwb::JSONWorkbook) = jwb.xlsxpath
 
 getsheet(jwb::JSONWorkbook, i) = jwb.sheets[i]
 getsheet(jwb::JSONWorkbook, s::AbstractString) = getsheet(jwb, jwb.sheetindex[s])
@@ -395,7 +391,6 @@ function Base.summary(io::IO, jwb::JSONWorkbook)
                 basename(xlsxpath(jwb)), length(jwb))
 end
 function Base.show(io::IO, jwb::JSONWorkbook)
-    wb = jwb.package.workbook
     summary(io, jwb)
     @printf(io, "%6s %-15s\n", "index", "name")
     println(io, "-"^(6+1+15+1))
