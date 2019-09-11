@@ -25,9 +25,9 @@ uuid = "8ba89e20-285c-5b6f-9357-94700520ee1b"
 
 [[EzXML]]
 deps = ["BinaryProvider", "Libdl", "Printf"]
-git-tree-sha1 = "724e13b7522563a18ae4a5cc4a9792ae3b0da3e6"
+git-tree-sha1 = "aed48d722e528bc634bd36a7d0e090fa2952a3c0"
 uuid = "8f5d6c58-4d21-5cfd-889c-e3ad7ee6a615"
-version = "0.9.3"
+version = "0.9.4"
 
 [[InteractiveUtils]]
 deps = ["Markdown"]
@@ -60,9 +60,9 @@ version = "1.1.0"
 
 [[Parsers]]
 deps = ["Dates", "Test"]
-git-tree-sha1 = "db2b35dedab3c0e46dc15996d170af07a5ab91c9"
+git-tree-sha1 = "ef0af6c8601db18c282d092ccbd2f01f3f0cd70b"
 uuid = "69de0a69-1ddd-5017-9359-2bf0b02dc9f0"
-version = "0.3.6"
+version = "0.3.7"
 
 [[Printf]]
 deps = ["Unicode"]
@@ -90,9 +90,9 @@ uuid = "4ec0a83e-493e-50e2-b9ac-8f72acf5a8f5"
 
 [[XLSX]]
 deps = ["Dates", "EzXML", "Printf", "ZipFile"]
-git-tree-sha1 = "aee6ccfbf6fb85ef4c6ba2eaa67000113f9493ad"
+git-tree-sha1 = "aabc3b2867f7a36b08ee3618893e510b88c68e4d"
 uuid = "fdbf4ff8-1666-58a4-91e7-1b58723a45e0"
-version = "0.5.4"
+version = "0.5.5"
 
 [[ZipFile]]
 deps = ["BinaryProvider", "Libdl", "Printf"]

@@ -99,9 +99,16 @@ end
 function Base.convert(::Type{T}, x::XLSXWrapperData{T2}) where {T<:AbstractDict, T2} 
     T(Pair(x.key, x.value))
 end
-function Base.convert(::Type{T}, x::XLSXWrapperData{T2}) where {T<:AbstractDict, T2<:XLSXWrapperData} 
-    T(Pair(x.key, convert(T, x.value)))
+
+@inline function prepare_merge(x::XLSXWrapperData)
+    K = keytype(x) <: Integer ? Integer : AbstractString
+    convert(OrderedDict{K, Any}, x)
 end
+@inline function prepare_merge(x::XLSXWrapperData{T2}) where T2<:XLSXWrapperData
+    K = keytype(x) <: Integer ? Integer : AbstractString
+    OrderedDict{K, Any}(Pair(x.key, prepare_merge(x.value)))
+end
+
 
 Base.iterate(x::XLSXWrapperData) = iterate(x, 1)
 Base.iterate(x::XLSXWrapperData, i) = i > length(1) ? nothing : Pair(x.key, x.value)
@@ -111,16 +118,11 @@ Base.valtype(x::XLSXWrapperData{T}) where T = T
 
 recursive_merge(x::XLSXWrapperData) = convert(OrderedDict, x)
 function recursive_merge(d::XLSXWrapperData, others::XLSXWrapperData...)
-    # K = Base.promoteK(keytype(d), others...)
-    # key_types = unique([keytype(d); vcat(keytype.(others)...)])
-
-    # val_types = unique([valtype(d); vcat(valtype.(others)...)])                                   
-    # V = length(val_types) == 1 ? val_types[1] : Any
-
     merge(recursive_merge, 
-            convert(OrderedDict, d), 
-             convert.(OrderedDict, others)...)
+        prepare_merge(d), 
+        prepare_merge.(others)...)
 end
+#TODO: merge 없애고 recursive_merge 만으로 돌아가도록 override 할 것!
 recursive_merge(x::AbstractDict...) = merge(recursive_merge, x...)
 recursive_merge(d::AbstractDict, x::AbstractDict...) = merge(recursive_merge, d, x...)
 

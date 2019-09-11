@@ -115,3 +115,18 @@ end
     @test collect(keys(jws.data[1])) == ["Key", "Data", "AllNull"]
 end
 
+@testset "XLSX Readng - type" begin
+    xf = joinpath(data_path, "othercase.xlsx")
+    data = JSONWorksheet(xf, "promotion")
+    @test isa(data[1]["t1"]["A"], Integer)
+    @test isa(data[1]["t1"]["B"], Bool)
+
+    @test isa(data[1]["t2"]["A"], Integer)
+    @test isa(data[1]["t2"]["B"], Float64)
+
+    @test isa(data[1]["t3"]["A"], Integer)
+    @test isa(data[1]["t3"]["B"], Bool)
+    @test isa(data[1]["t3"]["C"], Float64)
+end
+
+
