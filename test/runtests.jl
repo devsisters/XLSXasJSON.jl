@@ -89,8 +89,26 @@ end
     @test_throws ArgumentError jwb[:example5]
 end
 
-@testset "JSONWorkbook- setindex!" begin
-   # TODO
+
+@testset "XLSX Readng - merge" begin
+    xf = joinpath(data_path, "othercase.xlsx")
+    jwb = JSONWorkbook(xf)
+   
+    ws1 = jwb[:mergeA]
+    ws2 = jwb[:mergeB]
+
+    @test_throws MethodError merge(ws1, ws2, :Key)
+
+    new_sheet = merge(ws1, ws2, "Key")
+    @test collect(keys(new_sheet[1])) == ["Key", "Address", "Name", "Property"]
+
+    jwb[:mergeA] = new_sheet
+    @test keys(jwb[:mergeA][1]) == keys(new_sheet[1])
+
+    @test jwb[:mergeA][1]["Address"]["State"] == "Some"
+    @test jwb[:mergeA][1]["Address"]["TEL"] == [555,1111,2222]
+    @test jwb[:mergeA][1]["Property"][1]["A"] == "Out"
+    @test jwb[:mergeA][1]["Property"][2]["A"] == "think"
 end
 
 @testset "XLSX Readng - Asserts" begin
@@ -128,5 +146,7 @@ end
     @test isa(data[1]["t3"]["B"], Bool)
     @test isa(data[1]["t3"]["C"], Float64)
 end
+
+
 
 

@@ -271,7 +271,7 @@ end
 Base.getindex(jws::JSONWorksheet, i) = getindex(data(jws), i)
 Base.getindex(jws::JSONWorksheet, i1::Int, i2::Int, I::Int...) = getindex(data(jws), i1, i2, I...)
 
-function Base.merge(a::JSONWorksheet, b::JSONWorksheet, bykey)
+function Base.merge(a::JSONWorksheet, b::JSONWorksheet, bykey::AbstractString)
     @assert haskey(a.meta, bykey) "JSONWorksheet-$(a.sheetname) do not has `$bykey`"
     @assert haskey(b.meta, bykey) "JSONWorksheet-$(b.sheetname) do not has `$bykey`"
     
@@ -285,8 +285,13 @@ function Base.merge(a::JSONWorksheet, b::JSONWorksheet, bykey)
             merge!(row, sender[1])
         end
     end
+
+    if length(unique([keys(a.meta)... keys(b.meta)...])) > length(keys(a.meta)) + length(keys(b.meta)) - 1
+        @warn "There are duplicated key within sheets, data in '$(a.sheetname)' will be overwritten by '$(b.sheetname)'"
+    end
     meta = merge(a.meta, b.meta)
-    JSONWorksheet(meta, output, a.xlsxpath, a.sheetname)
+
+    JSONWorksheet(a.xlsxpath, meta, output, a.sheetname)
 end
 function Base.append!(a::JSONWorksheet, b::JSONWorksheet)
     @assert keys(a.meta) == keys(b.meta) "Column names must be same for append!\n $(setdiff(keys(a.meta), keys(b.meta)))"
