@@ -77,8 +77,6 @@ function XLSXWrapperMeta(cnames)
 
     XLSXWrapperMeta(map)
 end
-# NOTE:: revise용 임시!!!
-XLSXWrapperMeta(x::XLSXWrapperMeta) = XLSXWrapperMeta(x.cnames)
 
 #fallback functions
 Base.iterate(x::XLSXWrapperMeta) = iterate(x.map)
