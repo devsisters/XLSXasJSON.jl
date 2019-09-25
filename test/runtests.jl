@@ -33,13 +33,18 @@ end
 
     #example1
     data = jwb[:example1].data
-    @test data[1]["array1"] == split("100;200;300;400", ";")
+    @test data[1]["array_any"] == split("100;200;300;400", ";")
     @test data[1]["array_int"] == [100,200,300,400]
     @test data[1]["array_float"] == [0.1,0.2,0.3,0.4]
 
-    @test data[2]["array1"] == split("500;600;700;800", ";")
+    @test data[2]["array_any"] == split("500;600;700;800", ";")
     @test data[2]["array_int"] == [500,600,700,800]
     @test data[2]["array_float"] == [0.5,0.6,0.7,0.8]
+
+    @test data[3]["array_any"] == [900]
+    @test data[3]["array_string"] == ["900"]
+    @test data[3]["array_int"] == [900]
+    @test data[3]["array_float"] == [900.0]
 
     #example2
     data = jwb[:example2].data

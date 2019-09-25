@@ -159,10 +159,10 @@ function collect_vecdict(x::AbstractDict{K,V}) where {K <: Integer, V}
     return r
 end
 
-################################################
-# Interfaces
+#===================================================================================
+ Interfaces
 
-################################################
+===================================================================================#
 
 mutable struct JSONWorksheet
     xlsxpath::String
@@ -238,10 +238,18 @@ end
         value = singlerow[i]
         if T <: Array{T2, 1} where T2
             if !ismissing(value)
-                x = filter(!isempty, split(value, Regex(join(DELIM, "|"))))
-                value = strip.(x) #NOTE dangerous?
-                if T <: Array{T3, 1} where T3 <: Real
-                    value = parse.(eltype(T), value)
+                if isa(value, AbstractString)
+                    x = filter(!isempty, split(value, Regex(join(DELIM, "|"))))
+                    value = strip.(x) #NOTE dangerous?
+                    if T <: Array{T3, 1} where T3 <: Real
+                        value = parse.(eltype(T), value)
+                    end
+                else
+                    if T <: Array{T3, 1} where T3 <: AbstractString
+                        value = [string(value)]
+                    else
+                        value = [value]
+                    end
                 end
             end
         end
