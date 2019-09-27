@@ -269,14 +269,19 @@ data(jws::JSONWorksheet) = getfield(jws, :data)
 xlsxpath(jws::JSONWorksheet) = getfield(jws, :xlsxpath)
 sheetnames(jws::JSONWorksheet) = getfield(jws, :sheetname)
 
+Base.iterate(jws::JSONWorksheet) = iterate(data(jws))
+Base.iterate(jws::JSONWorksheet, i) = iterate(data(jws), i)
+
 Base.size(jws::JSONWorksheet) = (length(jws.data), length(jws.meta))
 function Base.size(jws::JSONWorksheet, d)
     d == 1 ? length(jws.data) : 
     d == 2 ? length(jws.meta) : throw(DimensionMismatch("only 2 dimensions of `JSONWorksheets` object are measurable"))
 end
+Base.length(jws::JSONWorksheet) = length(data(jws))
 Base.getindex(jws::JSONWorksheet, i) = getindex(data(jws), i)
 Base.getindex(jws::JSONWorksheet, i1::Int, i2::Int, I::Int...) = getindex(data(jws), i1, i2, I...)
 Base.lastindex(jws::JSONWorksheet) = lastindex(data(jws))
+
 
 function Base.merge(a::JSONWorksheet, b::JSONWorksheet, bykey::AbstractString)
     @assert haskey(a.meta, bykey) "JSONWorksheet-$(a.sheetname) do not has `$bykey`"
