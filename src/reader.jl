@@ -276,6 +276,7 @@ function Base.size(jws::JSONWorksheet, d)
 end
 Base.getindex(jws::JSONWorksheet, i) = getindex(data(jws), i)
 Base.getindex(jws::JSONWorksheet, i1::Int, i2::Int, I::Int...) = getindex(data(jws), i1, i2, I...)
+Base.lastindex(jws::JSONWorksheet) = lastindex(data(jws))
 
 function Base.merge(a::JSONWorksheet, b::JSONWorksheet, bykey::AbstractString)
     @assert haskey(a.meta, bykey) "JSONWorksheet-$(a.sheetname) do not has `$bykey`"
