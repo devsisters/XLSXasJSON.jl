@@ -1,9 +1,8 @@
 """
-    Able to use other string as delimiter by changing values of `DELIM`
-push!(XLSXasJSON.DELIM, ",")
-
+   TODO
+fix DELIM to work for push!(XLSXasJSON.DELIM)
 """
-const DELIM = [";"]
+const DELIM = [";", ","]
 
 const VEC_REGEX = r"\((.*?)\)" # key(), key(T)
 const VECDICT_REGEX = r"\[(.*?)\]" # [idx,key]
