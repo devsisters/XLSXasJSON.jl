@@ -1,9 +1,3 @@
-"""
-   TODO
-fix DELIM to work for push!(XLSXasJSON.DELIM)
-"""
-const DELIM = [";", ","]
-
 const VEC_REGEX = r"\((.*?)\)" # key(), key(T)
 const VECDICT_REGEX = r"\[(.*?)\]" # [idx,key]
 
@@ -44,7 +38,7 @@ end
 """
     XLSXWrapperMeta
 
-cnames - 엑셀의 컬럼명
+cnames - column names from worksheet
 map - 각 컬럼명을 연속된 Key와 Idx로 만들어 저장된다
       Key일 경우 Dict
       Idx일 경우 Vector에서 위치를 나타낸다
@@ -52,10 +46,12 @@ map - 각 컬럼명을 연속된 Key와 Idx로 만들어 저장된다
 """
 struct XLSXWrapperMeta{K,V} <: AbstractDict{K,V}
     map::AbstractDict{K,V}
+    delim
 end
-function XLSXWrapperMeta(cnames)
+function XLSXWrapperMeta(cnames, delim = nothing)
     @assert allunique(cnames) "Column names must be unique, check for duplication in \n$cnames"
-
+    del = delim === nothing ? ";" : delim
+    
     map = OrderedDict{String, Any}()
     jsonkeys = Array{Any}(undef, length(cnames))
     
@@ -74,7 +70,7 @@ function XLSXWrapperMeta(cnames)
     end
     @assert allunique(jsonkeys) "Nested JSON keys must be unique, check for duplication within \n$jsonkeys"
 
-    XLSXWrapperMeta(map)
+    XLSXWrapperMeta(map, del)
 end
 
 #fallback functions
@@ -86,7 +82,12 @@ Base.get(x::XLSXWrapperMeta, key, default) = get(x.map, key, default)
 Base.filter(f, x::XLSXWrapperMeta) = filter(f, x.map)
 function Base.merge(a::XLSXWrapperMeta, b::XLSXWrapperMeta)
     cnames = [collect(keys(a.map)); collect(keys(b.map))]
-    XLSXWrapperMeta(unique(cnames))
+    if a.delim == b.delim 
+        del = a.delim
+    else 
+        del = join(unique(vcat(a.delim, b.delim)), "|") |> Regex
+    end
+    XLSXWrapperMeta(unique(cnames), del)
 end
 
 mutable struct XLSXWrapperData{T}
@@ -169,18 +170,20 @@ mutable struct JSONWorksheet
     data::Array{T, 1} where T <: AbstractDict
     sheetname::String
 end
-function JSONWorksheet(xlsxpath, arr::Array{T, 2}, sheet) where T
+function JSONWorksheet(xlsxpath, arr::Array{T, 2}, sheet, delim) where T
     arr = dropmissing(arr)
     @assert !isempty(arr) "$(xlsxpath)!$(sheet) does not contains any data, try change optional argument'start_line'"
 
-    meta = XLSXWrapperMeta(arr[1, :])
+    meta = XLSXWrapperMeta(arr[1, :], delim)
     data = map(i -> construct_dict(meta, arr[i, :]), 2:size(arr, 1))
     data = collect_vecdict.(data)
 
     JSONWorksheet(xlsxpath, meta, data, string(sheet))
 end
 function JSONWorksheet(xf::XLSX.XLSXFile, sheet;
-                       start_line=1, row_oriented=true)
+                       start_line = 1, 
+                       row_oriented = true, 
+                       delim = nothing)
     ws = isa(sheet, Symbol) ? xf[string(sheet)] : xf[sheet]
     sheet = ws.name
     # orientation handling
@@ -195,7 +198,7 @@ function JSONWorksheet(xf::XLSX.XLSXFile, sheet;
             end
         end
 
-    JSONWorksheet(xf.filepath, ws, sheet)
+    JSONWorksheet(xf.filepath, ws, sheet, delim)
 end
 function JSONWorksheet(xlsxpath, sheet; kwargs...)
     xf = XLSX.readxlsx(xlsxpath)
@@ -238,10 +241,14 @@ end
         if T <: Array{T2, 1} where T2
             if !ismissing(value)
                 if isa(value, AbstractString)
-                    x = filter(!isempty, split(value, Regex(join(DELIM, "|"))))
-                    value = strip.(x) #NOTE dangerous?
+                    x = filter(!isempty, split(value, meta.delim))
+                    value = strip.(x) #Remove white spaces
                     if T <: Array{T3, 1} where T3 <: Real
-                        value = parse.(eltype(T), value)
+                        try 
+                            value = parse.(eltype(T), value)
+                        catch
+                            @warn "fail to parse $(value) to $T"
+                        end 
                     end
                 else
                     if T <: Array{T3, 1} where T3 <: AbstractString

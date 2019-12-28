@@ -152,13 +152,14 @@ end
     @test isa(data[1]["t3"]["C"], Float64)
 end
 
-@testset "XLSX Readng - add_delim(WIP)" begin
-    xf = joinpath(data_path, "othercase.xlsx")
-    # XLSXasJSON.add_delim!(",")
-    data = JSONWorksheet(xf, "adddelim")
+@testset "XLSX Readng - delim" begin
+    xf = joinpath(data_path, "delim.xlsx")
+    data = JSONWorksheet(xf, "Sheet1"; delim = r";|,")
 
     @test  data[1]["Array_1"] == ["a", "b", "c"]
     @test  data[2]["Array_1"] == ["d", "e", "f"]
+    @test  data[3]["Array_1"] == ["g", "h", "i"]
     @test  data[1]["Array_2"] == [1,2,3]
     @test  data[2]["Array_2"] == [4,5,6]
+    @test  data[3]["Array_2"] == [7,8,9]
 end

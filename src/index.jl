@@ -20,7 +20,6 @@ Base.copy(x::Index) = Index(copy(x.lookup), copy(x.names))
 Base.isequal(x::AbstractIndex, y::AbstractIndex) = _names(x) == _names(y) # it is enough to check names
 Base.:(==)(x::AbstractIndex, y::AbstractIndex) = isequal(x, y)
 
-
 Base.haskey(x::Index, key::AbstractString) = haskey(x.lookup, key)
 Base.haskey(x::Index, key::Integer) = 1 <= key <= length(x.names)
 Base.haskey(x::Index, key::Bool) =
