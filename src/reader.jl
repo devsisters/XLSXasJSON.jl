@@ -1,38 +1,41 @@
-const VEC_REGEX = r"\((.*?)\)" # key(), key(T)
-const VECDICT_REGEX = r"\[(.*?)\]" # [idx,key]
+const REG_VECTOR = r"(\(\))|(\(Float64\))|(\(Float\))|(\(Int\))"
 
-function determine_datatype(k)::Tuple
+function determine_datatype(key)::Tuple
     # [idx,key]
-    TV = Any
-    if occursin(VECDICT_REGEX, k)
-        # TODO: provide error messaqge for missing "." key[1,key2]
-        k = chop(k; head=1, tail=1) #remove []
-        k = split(k, ",")
-        @assert length(k) == 2 "Specify index of Vector{Dict} data in $(k)"
+    VALUE_TYPE = Any
+    
+    if occursin(r"\[.+\]", key) #[*]
+        m = match(r"\[(\d+)]", key) # Primitive type
+        if isnothing(m)
+            if !occursin(REG_VECTOR, key)
+                throw(AssertionError("Specify index inside '[]' in $key"))
+            end
+            VALUE_TYPE = vector_element_datatype(key)
+            key = replace(key, REG_VECTOR => "")
+            m = match(r"\[(\d+)]", key)
 
-        if occursin(VEC_REGEX, k[2])
-            TV = finddatatype_in_vector(k[2])
-            k[2] = replace(k[2], VEC_REGEX => "")
         end
-        k = [parse(Int, k[1]), k[2]]
+        k = parse(Int, m.captures[1])
 
     # key(), key(T)
-    elseif occursin(VEC_REGEX, k)
-        TV = finddatatype_in_vector(k)
-        k = replace(k, VEC_REGEX => "")
-    end
-    (k ,TV)
-end
-function finddatatype_in_vector(k)
-    m = match(VEC_REGEX, k)
-    t = uppercasefirst(m.captures[1])
-    if t == ""
-        Vector{Any}
-    elseif t == "Float"
-        Vector{Float64}
+    elseif occursin(REG_VECTOR, key) # *(*)
+        k = replace(key, REG_VECTOR => "")
+        VALUE_TYPE = vector_element_datatype(key)
     else
-        @eval Vector{$(Symbol(t))}
+        k = key 
     end
+
+    return (k ,VALUE_TYPE)
+end
+
+function vector_element_datatype(key)
+    m = match(REG_VECTOR, key)
+    T = m.match == "()" ? Any :
+            lowercase(m.match) == "(int)" ? Int :
+            lowercase(m.match) == "(float)" ? Float64 : 
+            lowercase(m.match) == "(float64)" ? Float64 : 
+            throw(MethodError(determine_datatype, key))
+    return Array{T, 1}
 end
 
 """

@@ -8,8 +8,54 @@ import XLSXasJSON.XLSXWrapperData
 
 data_path = joinpath(@__DIR__, "data")
 
-@testset "Datatype decision" begin
+@testset "JSONPointer Basic" begin
+
+    a = XLSXasJSON.JSONPointer("a/1/c")
+    b = XLSXasJSON.JSONPointer("a/5")   
+    c = XLSXasJSON.JSONPointer("a/2/d()")
+    d = XLSXasJSON.JSONPointer("a/2/e(Int)")
+    e = XLSXasJSON.JSONPointer("a/2/f(Float)")
+    
+    @test a.key == ("a", 1, "c")
+    @test b.key == ("a", 5)
+    @test c.key == ("a", 2, "d")
+    @test c.valuetype <: Array
+    @test d.valuetype <: Array{Int, 1}
+    @test e.valuetype <: Array{Float64, 1}
+    @test_throws AssertionError XLSXasJSON.JSONPointer("0")
+
+    a1 = OrderedDict(a)
+    
+    @test a1["a"] isa AbstractArray
+    @test a1["a"][1] isa OrderedDict
+    @test a1["a"][1]["c"] |> ismissing
+
+    a1[b] = "b"
+    a1[c] = ["c", 1000]
+    a1[d] = [1, 2]
+    a1[e] = [1., 2.]
+
+    @test a1[b] == "b"
+    @test a1[c] == ["c", 1000]
+    @test a1[d] == [1, 2]
+    @test a1[e] == [1., 2.]
+end
+
+@testset "JSONPointer hard case" begin
+    f = XLSXasJSON.JSONPointer("3/a/1/b")
+    @test f.key == (3, "a", 1, "b")
+
+    d = Dict(f)
+    @test d[1] |> ismissing
+    @test d[3] isa Dict
+    @test d[3]["a"][1] isa Dict
+
+end
+
+
+@testset "XLSXWrapperMeta" begin
     data = ["a" "b()" "c(Int)" "d(Float)"]
+
     meta = XLSXWrapperMeta(data)
     @test meta["a"][1] == Any
     @test meta["b()"][1] == Array{Any, 1}
