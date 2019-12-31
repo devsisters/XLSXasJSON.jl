@@ -106,10 +106,13 @@ Sometimes it's convinient to put array values in seperate column in XLSX
 }]
 ```
 
-#### Vector{T} where T
-An embedded array key name looks like this and has ';' delimited values. You can also specify DataType of array with `(Int)`,`(Float)`,`(String)`
+#### Type Declarations
+You can declare Type with `::` operator same way as Julia.
+- value of `Vector` will be splitted with deliminator ';'.
+- Only json supported types will be checked for validation
 
-| /array()    |/array_int(Int)|/array_float(Float)|
+
+| /array::Vector    |/array_int::Vector{Int}|/array_float::Vector{Float64}|
 | ------------| ------------ | ------------|
 | 100;200;300 |100;200;300   |100;200;300  |
 
@@ -140,7 +143,7 @@ and produces
 Now you know all the rules necessary to create any json data structure you want with just a column name
 This is a more complete row oriented example
 
-| /a/b | /a/b2(Int) | /a/b3/1,Type | /a/b3/1/Amount | /a/b3/2/Type | /a/b3/2/Amount | /a/b3/3/Type | /a/b3/3/Amount() |
+| /a/b | /a/b2::Vector{Int} | /a/b3/1,Type | /a/b3/1/Amount | /a/b3/2/Type | /a/b3/2/Amount | /a/b3/3/Type | /a/b3/3/Amount::Vector |
 |------------------|-------------|------|---|------------|---|-----------|-----------|
 | Fooood | 100;200;300 | Cake | 50 | Chocolate | 19 | Ingredient | Salt;100 |
 

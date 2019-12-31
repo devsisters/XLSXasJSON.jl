@@ -9,13 +9,13 @@ data_path = joinpath(@__DIR__, "data")
 
     a = XLSXasJSON.JSONPointer("/a/1/c")
     b = XLSXasJSON.JSONPointer("/a/5")   
-    c = XLSXasJSON.JSONPointer("/a/2/d()")
-    d = XLSXasJSON.JSONPointer("/a/2/e(Int)")
-    e = XLSXasJSON.JSONPointer("/a/2/f(Float)")
+    c = XLSXasJSON.JSONPointer("/a/2/d::Vector")
+    d = XLSXasJSON.JSONPointer("/a/2/e::Vector{Int}")
+    e = XLSXasJSON.JSONPointer("/a/2/f::Vector{Float64}")
     
-    @test a.key == ("a", 1, "c")
-    @test b.key == ("a", 5)
-    @test c.key == ("a", 2, "d")
+    @test a.token == ("a", 1, "c")
+    @test b.token == ("a", 5)
+    @test c.token == ("a", 2, "d")
     @test c.valuetype <: Array
     @test d.valuetype <: Array{Int, 1}
     @test e.valuetype <: Array{Float64, 1}
@@ -44,22 +44,22 @@ end
 
 @testset "JSONPointer hard case" begin
     p = XLSXasJSON.JSONPointer("/3/a/1/b")
-    @test p.key == (3, "a", 1, "b")
+    @test p.token == (3, "a", 1, "b")
 
     d = Dict(p)
     @test d[1] |> ismissing
     @test d[3] isa Dict
     @test d[3]["a"][1] isa Dict
 
-    p = XLSXasJSON.JSONPointer("/1/a()/2()/3()")
-    @test p.key == (1, "a", 2, 3)
-    d = Dict(p)
+    p = XLSXasJSON.JSONPointer("/1/a/2/b")
+    @test p.token == (1, "a", 2, "b")
+    d = OrderedDict(p)
 
     @test d isa Array
-    @test d[1] isa Dict
+    @test d[1] isa OrderedDict
     @test d[1]["a"] isa Array
     @test d[1]["a"][1] |> ismissing
-    @test d[1]["a"][2] isa Array
+    @test d[1]["a"][2] isa OrderedDict
 end
 
 

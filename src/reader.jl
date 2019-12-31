@@ -11,24 +11,27 @@ function JSONWorksheet(xlsxpath, arr::Array{T, 2}, sheet, delim) where T
     arr = dropmissing(arr)
     @assert !isempty(arr) "'$(xlsxpath)!$(sheet)' does not contains any data, try change optional argument'start_line'"
 
-    pointers = broadcast(el -> JSONPointer(el), arr[1, :])
-    real_keys = map(el -> el.key, pointers)
+    p = map(el -> begin 
+                    startswith(el, "/") ? JSONPointer(el) : 
+                                          JSONPointer("/"*el) 
+                end, arr[1, :])
+    real_keys = map(el -> el.token, p)
     if !allunique(real_keys) 
         throw(AssertionError("column names must be unique, check for duplication $(arr[1, :])"))
     end
 
-    template = create_by_pointer(OrderedDict, pointers)
+    template = create_by_pointer(OrderedDict, p)
     data = Array{typeof(template), 1}(undef, size(arr, 1)-1)
     for i in 1:length(data)
         v = deepcopy(template)
         data[i] = v
         row = arr[i+1, :]
-        @inbounds for (col, p) in enumerate(pointers)
+        @inbounds for (col, p) in enumerate(p)
             v[p] = collect_cell(p, row[col], delim)
         end
     end
 
-    JSONWorksheet(xlsxpath, pointers, data, string(sheet))
+    JSONWorksheet(xlsxpath, p, data, string(sheet))
 end
 function JSONWorksheet(xf::XLSX.XLSXFile, sheet;
                        start_line = 1, 
@@ -170,8 +173,8 @@ function Base.merge(a::JSONWorksheet, b::JSONWorksheet, bykey::AbstractString)
     JSONWorksheet(b.xlsxpath, pointers, data, b.sheetname)
 end
 function Base.append!(a::JSONWorksheet, b::JSONWorksheet)
-    ak = map(el -> el.key, keys(a)) 
-    bk = map(el -> el.key, keys(b))
+    ak = map(el -> el.token, keys(a)) 
+    bk = map(el -> el.token, keys(b))
     
     if sort(ak) != sort(bk)
         throw(AssertionError("""Column names must be same for append!
