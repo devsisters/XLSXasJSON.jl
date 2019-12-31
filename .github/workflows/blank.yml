@@ -7,7 +7,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        julia-version: [1.2.0, 1.0.5]
+        julia-version: [stable, lts]
         julia-arch: [x64, x86]
         os: [ubuntu-latest, windows-latest, macOS-latest]
         exclude:
@@ -19,11 +19,4 @@ jobs:
       - uses: julia-actions/setup-julia@latest
         with:
           version: ${{ matrix.julia-version }}
-      - uses: julia-actions/julia-buildpkg@master
       - uses: julia-actions/julia-runtest@master
-      - uses: julia-actions/julia-uploadcodecov@master
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-      - uses: julia-actions/julia-uploadcoveralls@master
-        env:
-          COVERALLS_TOKEN: ${{ secrets.COVERALLS_TOKEN }}
