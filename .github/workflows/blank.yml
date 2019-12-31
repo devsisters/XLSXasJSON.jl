@@ -1,17 +1,22 @@
-name: Run tests
+name: Run CI on master
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - master
 
 jobs:
   test:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        julia-version: [stable, lts]
+        julia-version: [1.2.0, 1.3.0]
         julia-arch: [x64, x86]
         os: [ubuntu-latest, windows-latest, macOS-latest]
         exclude:
           - os: macOS-latest
+            julia-arch: x86
+          - os: ubuntu-latest
             julia-arch: x86
 
     steps:
@@ -19,4 +24,13 @@ jobs:
       - uses: julia-actions/setup-julia@latest
         with:
           version: ${{ matrix.julia-version }}
-      - uses: julia-actions/julia-runtest@master
+          arch: ${{ matrix.julia-arch }}
+      - uses: julia-actions/julia-buildpkg@latest
+        env:
+          PYTHON: ""
+      - uses: julia-actions/julia-runtest@latest
+        env:
+          PYTHON: ""
+      - uses: julia-actions/julia-uploadcodecov@latest
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
