@@ -1,19 +1,14 @@
 # XLSXasJSON [[KR](https://github.com/devsisters/XLSXasJSON.jl/blob/master/README_kr.md)]
-[![License][license-img]](LICENSE)
-<!-- [![travis][travis-img]][travis-url] -->
-<!-- [![appveyor][appveyor-img]][appveyor-url] -->
-<!-- [![codecov][codecov-img]][codecov-url] -->
+![](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat-square)
+![](https://github.com/devsisters/XLSXasJSON.jl/workflows/Run%20CI%20on%20master/badge.svg)
 
-[license-img]: http://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat
 
 Inspired by [excel-as-json](https://github.com/stevetarver/excel-as-json)
 
 ## Usage
-Parse Excel xlsx files into a Julia data structure to write them as a JSON encoded file.
+Parse Excel xlsx files into a Julia data structure to write them as a JSON encoded file. 
 
-You may organize Excel data by columns or rows where the first column or row contains object key names and the remaining columns/rows contain object values.
-
-Expected use is offline translation of Excel data to JSON files
+Designated row or colum must be standardized [JSONPointer](https://tools.ietf.org/html/rfc6901) token, ramaning rows will passed to json encoded file.
 
 ## Installation
 
@@ -24,6 +19,8 @@ pkg> add https://github.com/devsisters/XLSXasJSON.jl
 ## Usage
 
 ``` julia
+    using XLSXasJSON, JSON
+
     p = joinpath(dirname(pathof(XLSXasJSON)), "../test/data")
     xf = joinpath(p, "examples.xlsx")
     jws = JSONWorksheet(xf, :example1)
@@ -39,7 +36,7 @@ pkg> add https://github.com/devsisters/XLSXasJSON.jl
 #### Any
 A simple, row oriented key
 
-| color|
+| /color|
 | -----|
 | red|
 
@@ -54,7 +51,7 @@ produces
 #### Dict
 A dotted key name looks like
 
-| color.name|color.value|
+| /color/name|color/value|
 | ----------|-----------|
 | red       |#f00       |
 
@@ -71,7 +68,7 @@ and produces
 
 It can has as many layers as you want
 
-| a.b.c.d.e.f|
+| /a/b/c/d/e/f|
 | ---------------|
 | It can be done|
 
@@ -93,12 +90,26 @@ and produces
   }]
 
 ```
+#### Array
+Sometimes it's convinient to put array values in seperate column in XLSX 
 
+| /color/name|color/rgb/1|color/rgb/2|color/rgb/3|
+| ----|-----|-----|-----|
+| red     |255   |0 |0  |
+
+```json
+[{
+  "color": {
+    "name": "red",
+    "rgb": [255, 0, 0]
+    }
+}]
+```
 
 #### Vector{T} where T
-An embedded array key name looks like this and has ';' delimited values. You can also decide DataType of array
+An embedded array key name looks like this and has ';' delimited values. You can also specify DataType of array with `(Int)`,`(Float)`,`(String)`
 
-| array()    |array_int(Int)|array_float(float)|
+| /array()    |/array_int(Int)|/array_float(Float)|
 | ------------| ------------ | ------------|
 | 100;200;300 |100;200;300   |100;200;300  |
 
@@ -124,29 +135,12 @@ and produces
 }]
 ```
 
-#### Vector{Dict}
-A dotted key name looks like
-
-| phones.[1,number]|
-| ----------------|
-| 123.456.7890|
-
-and produces
-
-```json
-[{
-  "phones": [{
-      "number": "123.456.7890"
-    }]
-}]
-```
-
 #### All of the above
 
 Now you know all the rules necessary to create any json data structure you want with just a column name
 This is a more complete row oriented example
 
-| a.b | a.b2(Int) | a.b3.[1,Type] | a.b3.[1,Amount] | a.b3.[2,Type] | a.b3.[2,Amount] | a.b3.[3,Type] | a.b3.[3,Amount()] |
+| /a/b | /a/b2(Int) | /a/b3/1,Type | /a/b3/1/Amount | /a/b3/2/Type | /a/b3/2/Amount | /a/b3/3/Type | /a/b3/3/Amount() |
 |------------------|-------------|------|---|------------|---|-----------|-----------|
 | Fooood | 100;200;300 | Cake | 50 | Chocolate | 19 | Ingredient | Salt;100 |
 

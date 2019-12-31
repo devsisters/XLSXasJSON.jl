@@ -1,9 +1,7 @@
 # XLSXasJSON [[ENG](https://github.com/devsisters/XLSXasJSON.jl/blob/master/README_kr.md)]
 
-[![License][license-img]](LICENSE)
-<!-- [![travis][travis-img]][travis-url] -->
-<!-- [![appveyor][appveyor-img]][appveyor-url] -->
-<!-- [![codecov][codecov-img]][codecov-url] -->
+![](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat-square)
+![](https://github.com/devsisters/XLSXasJSON.jl/workflows/Run%20CI%20on%20master/badge.svg)
 
 [license-img]: http://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat
 
@@ -21,180 +19,163 @@ pkg> add https://github.com/devsisters/XLSXasJSON.jl
 
 ## 사용법
 ``` julia
-    xf = joinpath(@__DIR__, "../data/row-oriented.xlsx")
-    a = JSONWorksheet(xf, 1)
-    a = JSONWorksheet(xf, 1; start_line = 1, row_oriented = true)
+    using XLSXasJSON, JSON
+
+    p = joinpath(dirname(pathof(XLSXasJSON)), "../test/data")
+    xf = joinpath(p, "examples.xlsx")
+    jws = JSONWorksheet(xf, :example1)
 
     # turns into json object
-    JSON.json(a)
+    JSON.json(jws)
     # saves with indent
-    XLSXasJSON.write("row-oriented_sheet1.json", a; indent = 2)
+    XLSXasJSON.write("examples_example1.json", jws; indent = 2)
 ```
 
-### 컬럼명 규칙
+### Examples
 
 #### Any
-아래와 같이 기본적인 컬럼명은
+A simple, row oriented key
 
-| firstName|
-| ---------|
-| Jihad|
+| /color|
+| -----|
+| red|
 
-`.json`으로 아래와 같이 전환됩니다.
+produces
 
 ```json
 [{
-  "firstName": "Jihad"
+  "color": "red"
 }]
 ```
 
 #### Dict
+A dotted key name looks like
 
-| address.street|
-| ---------------|
-| 12 Beaver Court|
+| /color/name|color/value|
+| ----------|-----------|
+| red       |#f00       |
 
-`.json`으로 아래와 같이 전환됩니다.
+and produces
 
 ```json
 [{
-  "address": {
-    "street": "12 Beaver Court"
+  "color": {
+    "name": "red",
+    "value": "#f00"
     }
 }]
 ```
 
-#### Vector{Dict}
+It can has as many layers as you want
 
-| phones[0].number|
-| ----------------|
-| 123.456.7890|
+| /a/b/c/d/e/f|
+| ---------------|
+| It can be done|
 
-`.json`으로 아래와 같이 전환됩니다.
+and produces
 
 ```json
 [{
-  "phones": [{
-      "number": "123.456.7890"
-    }]
+    "a": {
+      "b": {
+        "c": {
+          "d": {
+            "e": {
+              "f": "It can be done"
+            }
+          }
+        }
+      }
+    }
+  }]
+
+```
+#### Array
+Sometimes it's convinient to put array values in seperate column in XLSX 
+
+| /color/name|color/rgb/1|color/rgb/2|color/rgb/3|
+| ----|-----|-----|-----|
+| red     |255   |0 |0  |
+
+```json
+[{
+  "color": {
+    "name": "red",
+    "rgb": [255, 0, 0]
+    }
 }]
 ```
 
 #### Vector{T} where T
+An embedded array key name looks like this and has ';' delimited values. You can also specify DataType of array with `(Int)`,`(Float)`,`(String)`
 
-| aliases[]
-| ----------------
-| stormagedden;bob
+| /array()    |/array_int(Int)|/array_float(Float)|
+| ------------| ------------ | ------------|
+| 100;200;300 |100;200;300   |100;200;300  |
 
-`.json`으로 아래와 같이 전환됩니다.
+and produces
 
 ```json
 [{
-  "aliases": [
-    "stormagedden",
-    "bob"
+  "array": [
+    "100",
+    "200",
+    "300"
+  ],
+  "array_int": [
+    100,
+    200,
+    300
+  ],
+  "array_float": [
+    100.0,
+    200.0,
+    300.0
   ]
 }]
 ```
 
-#### 종합
-앞서 소개한 컬럼명 규칙을 모두 사용하면 아래와 같습니다.
+#### All of the above
 
-firstName | lastName | address.street  | address.city | address.state | address.zip
---------- | -------- | --------------- | ------------ | ------------- | -----------
-Jihad     | Saladin  | 12 Beaver Court | Snowmass     | CO            | 81615
-Marcus    | Rivapoli | 16 Vail Rd      | Vail         | CO            | 81657
+Now you know all the rules necessary to create any json data structure you want with just a column name
+This is a more complete row oriented example
 
-`.json`으로 아래와 같이 전환됩니다.
+| /a/b | /a/b2(Int) | /a/b3/1,Type | /a/b3/1/Amount | /a/b3/2/Type | /a/b3/2/Amount | /a/b3/3/Type | /a/b3/3/Amount() |
+|------------------|-------------|------|---|------------|---|-----------|-----------|
+| Fooood | 100;200;300 | Cake | 50 | Chocolate | 19 | Ingredient | Salt;100 |
 
-```json
-[{
-    "firstName": "Jihad",
-    "lastName": "Saladin",
-    "address": {
-      "street": "12 Beaver Court",
-      "city": "Snowmass",
-      "state": "CO",
-      "zip": "81615"
-    }
-  },
-  {
-    "firstName": "Marcus",
-    "lastName": "Rivapoli",
-    "address": {
-      "street": "16 Vail Rd",
-      "city": "Vail",
-      "state": "CO",
-      "zip": "81657"
-    }
-  }]
-```
-가로가 아니라 세로로된 시트도 전환이 가능합니다.
-
-firstName            | Jihad            | Marcus
-:------------------- | :--------------- | :-----------
-**lastName**         | Saladin          | Rivapoli
-**address.street**   | 12 Beaver Court  | 16 Vail Rd
-**address.city**     | Snowmass         | Vail
-**address.state**    | CO               | CO
-**address.zip**      | 81615            | 81657
-**phones[0].type**   | home             | home
-**phones[0].number** | 123.456.7890     | 123.456.7891
-**phones[1].type**   | work             | work
-**phones[1].number** | 098.765.4321     | 098.765.4322
-**aliases[]**        | stormagedden;bob | mac;markie
-
-`.json`으로 아래와 같이 전환됩니다.
+would produce
 
 ```json
 [
   {
-    "firstName": "Jihad",
-    "lastName": "Saladin",
-    "address": {
-      "street": "12 Beaver Court",
-      "city": "Snowmass",
-      "state": "CO",
-      "zip": "81615"
-    },
-    "phones": [
-      {
-        "type": "home",
-        "number": "123.456.7890"
-      },
-      {
-        "type": "work",
-        "number": "098.765.4321"
-      }
-    ],
-    "aliases": [
-      "stormagedden",
-      "bob"
-    ]
-  },
-  {
-    "firstName": "Marcus",
-    "lastName": "Rivapoli",
-    "address": {
-      "street": "16 Vail Rd",
-      "city": "Vail",
-      "state": "CO",
-      "zip": "81657"
-    },
-    "phones": [
-      {
-        "type": "home",
-        "number": "123.456.7891"
-      },
-      {
-        "type": "work",
-        "number": "098.765.4322"
-      }
-    ],
-    "aliases": [
-      "mac",
-      "markie"
-    ]
+    "a": {
+      "b": "Fooood",
+      "b2": [
+        100,
+        200,
+        300
+      ],
+      "b3": [
+        {
+          "Type": "Cake",
+          "Amount": 50
+        },
+        {
+          "Type": "Chocolate",
+          "Amount": 19
+        },
+        {
+          "Type": "Ingredient",
+          "Amount": [
+            "Salt",
+            "100"
+          ]
+        }
+      ]
+    }
   }
 ]
+
 ```
+You can do same with column oriented sheets. with `row_oriented = false` keyword argument. 
