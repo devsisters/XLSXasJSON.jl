@@ -10,9 +10,8 @@ include("pointer.jl")
 include("reader.jl")
 include("writer.jl")
 
-export JSONWorkbook, JSONWorksheet,
+export JSONWorkbook, JSONWorksheet, JSONPointer,
         hassheet, sheetnames,
-        xlsxpath, dropnull,
-        JSONPointer
+        xlsxpath, dropnull
 
 end # module

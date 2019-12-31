@@ -3,18 +3,15 @@ using XLSXasJSON
 using DataStructures
 using JSON
 
-import XLSXasJSON.XLSXWrapperMeta
-import XLSXasJSON.XLSXWrapperData
-
 data_path = joinpath(@__DIR__, "data")
 
 @testset "JSONPointer Basic" begin
 
-    a = XLSXasJSON.JSONPointer("a/1/c")
-    b = XLSXasJSON.JSONPointer("a/5")   
-    c = XLSXasJSON.JSONPointer("a/2/d()")
-    d = XLSXasJSON.JSONPointer("a/2/e(Int)")
-    e = XLSXasJSON.JSONPointer("a/2/f(Float)")
+    a = XLSXasJSON.JSONPointer("/a/1/c")
+    b = XLSXasJSON.JSONPointer("/a/5")   
+    c = XLSXasJSON.JSONPointer("/a/2/d()")
+    d = XLSXasJSON.JSONPointer("/a/2/e(Int)")
+    e = XLSXasJSON.JSONPointer("/a/2/f(Float)")
     
     @test a.key == ("a", 1, "c")
     @test b.key == ("a", 5)
@@ -22,7 +19,11 @@ data_path = joinpath(@__DIR__, "data")
     @test c.valuetype <: Array
     @test d.valuetype <: Array{Int, 1}
     @test e.valuetype <: Array{Float64, 1}
-    @test_throws AssertionError XLSXasJSON.JSONPointer("0")
+
+    @test_throws ArgumentError XLSXasJSON.JSONPointer("1")
+    @test_throws ArgumentError XLSXasJSON.JSONPointer("a")
+
+    @test_throws MethodError XLSXasJSON.JSONPointer(0)
 
     a1 = OrderedDict(a)
     
@@ -42,116 +43,106 @@ data_path = joinpath(@__DIR__, "data")
 end
 
 @testset "JSONPointer hard case" begin
-    f = XLSXasJSON.JSONPointer("3/a/1/b")
-    @test f.key == (3, "a", 1, "b")
+    p = XLSXasJSON.JSONPointer("/3/a/1/b")
+    @test p.key == (3, "a", 1, "b")
 
-    d = Dict(f)
+    d = Dict(p)
     @test d[1] |> ismissing
     @test d[3] isa Dict
     @test d[3]["a"][1] isa Dict
 
+    p = XLSXasJSON.JSONPointer("/1/a()/2()/3()")
+    @test p.key == (1, "a", 2, 3)
+    d = Dict(p)
+
+    @test d isa Array
+    @test d[1] isa Dict
+    @test d[1]["a"] isa Array
+    @test d[1]["a"][1] |> ismissing
+    @test d[1]["a"][2] isa Array
 end
 
-
-@testset "XLSXWrapperMeta" begin
-    data = ["a" "b()" "c(Int)" "d(Float)"]
-
-    meta = XLSXWrapperMeta(data)
-    @test meta["a"][1] == Any
-    @test meta["b()"][1] == Array{Any, 1}
-    @test meta["c(Int)"][1] == Array{Int, 1}
-    @test meta["d(Float)"][1] == Array{Float64, 1}
-end
-
-@testset "Colname splitting" begin
-    data = ["a" "a.[1,d3]" "a.[2,d3]"]
-    meta = XLSXWrapperMeta(data)
-    @test meta["a"][2] == ["a"]
-    @test meta["a.[1,d3]"][2] == ["a", 1, "d3"]
-    @test meta["a.[2,d3]"][2] == ["a", 2, "d3"]
-end
 
 # testdata
 @testset "Adobe Spry Examples" begin
 # source: https://opensource.adobe.com/Spry/samples/data_region/JSONDataSetSample.html
     f = joinpath(data_path, "examples.xlsx")
-    jwb = JSONWorkbook(f)
 
     #example1
-    data = jwb[:example1].data
-    @test data[1]["array_any"] == split("100;200;300;400", ";")
-    @test data[1]["array_int"] == [100,200,300,400]
-    @test data[1]["array_float"] == [0.1,0.2,0.3,0.4]
+    jws = JSONWorksheet(f, "example1")
+    @test jws[1]["array_any"] == split("100;200;300;400", ";")
+    @test jws[1]["array_int"] == [100,200,300,400]
+    @test jws[1]["array_float"] == [0.1,0.2,0.3,0.4]
 
-    @test data[2]["array_any"] == split("500;600;700;800", ";")
-    @test data[2]["array_int"] == [500,600,700,800]
-    @test data[2]["array_float"] == [0.5,0.6,0.7,0.8]
+    @test jws[2]["array_any"] == split("500;600;700;800", ";")
+    @test jws[2]["array_int"] == [500,600,700,800]
+    @test jws[2]["array_float"] == [0.5,0.6,0.7,0.8]
 
-    @test data[3]["array_any"] == [900]
-    @test data[3]["array_string"] == ["900"]
-    @test data[3]["array_int"] == [900]
-    @test data[3]["array_float"] == [900.0]
+    @test jws[3]["array_any"] == [900]
+    @test jws[3]["array_string"] == ["900"]
+    @test jws[3]["array_int"] == [900]
+    @test jws[3]["array_float"] == [900.0]
 
     #example2
-    data = jwb[:example2].data
-    JSON.json(data) == replace("""[{"color":"red","value":"#f00"},{"color":"green","value":"#0f0"},{"color":"blue","value":"#00f"},{"color":"cyan","value":"#0ff"},{"color":"magenta","value":"#f0f"},{"color":"yellow","value":"#ff0"},{"color":"black","value":"#000"}]""", "\n"=>"")
+    jws = JSONWorksheet(f, "example2")
+    @test JSON.json(jws) == replace("""[{"color":"red","value":"#f00"},{"color":"green","value":"#0f0"},{"color":"blue","value":"#00f"},{"color":"cyan","value":"#0ff"},{"color":"magenta","value":"#f0f"},{"color":"yellow","value":"#ff0"},{"color":"black","value":"#000"}]""", "\n"=>"")
 
     #example5
-    data = jwb[:example5].data
-    @test isa(data[1]["batters"]["batter"], Array)
-    @test isa(data[2]["batters"]["batter"], Array)
-    @test isa(data[3]["batters"]["batter"], Array)
+    jws = JSONWorksheet(f, "example5")
+    @test isa(jws[1]["batters"]["batter"], Array)
+    @test isa(jws[2]["batters"]["batter"], Array)
+    @test isa(jws[3]["batters"]["batter"], Array)
 
-    @test isa(data[1]["topping"], Array)
-    @test isa(data[2]["topping"], Array)
-    @test isa(data[3]["topping"], Array)
+    @test isa(jws[1]["topping"], Array)
+    @test isa(jws[2]["topping"], Array)
+    @test isa(jws[3]["topping"], Array)
 
-    @test data[1]["batters"]["batter"][1] == OrderedDict("id"=>1001, "type"=>"Regular")
-    @test data[1]["batters"]["batter"][4] == OrderedDict("id"=>1004, "type"=>"Devil's Food")
+    @test jws[1]["batters"]["batter"][1] == OrderedDict("id"=>1001, "type"=>"Regular")
+    @test jws[1]["batters"]["batter"][4] == OrderedDict("id"=>1004, "type"=>"Devil's Food")
 
-    @test data[1]["topping"][1] == OrderedDict("id"=>5001, "type"=>"None")
-    @test data[2]["topping"][2] == OrderedDict("id"=>5002, "type"=>"Glazed")
-    @test data[3]["topping"][3] == OrderedDict("id"=>5003, "type"=>"Chocolate")
+    @test jws[1]["topping"][1] == OrderedDict("id"=>5001, "type"=>"None")
+    @test jws[2]["topping"][2] == OrderedDict("id"=>5002, "type"=>"Glazed")
+    @test jws[3]["topping"][3] == OrderedDict("id"=>5003, "type"=>"Chocolate")
 
     #example6 - xf_coloriented
-    data = JSONWorksheet(f, :example6; row_oriented=false).data
-    
-    @test data[1]["id"] == 1
-    @test data[1]["type"] == "donut"
-    @test data[1]["name"] == "Cake"
-    @test data[1]["image"]["url"] == "images/0001.jpg"
-    @test data[1]["image"]["width"] == 200
-    @test data[1]["image"]["height"] == 2500
-    @test data[1]["thumbnail"]["url"] == "images/thumbnails/0001.jpg"
-    @test data[1]["thumbnail"]["width"] == 32
-    @test data[1]["thumbnail"]["height"] == 32
+    jws = JSONWorksheet(f, "example6"; row_oriented = false)
+    @test jws[1]["id"] == 1
+    @test jws[1]["type"] == "donut"
+    @test jws[1]["name"] == "Cake"
+    @test jws[1]["image"]["url"] == "images/0001.jpg"
+    @test jws[1]["image"]["width"] == 200
+    @test jws[1]["image"]["height"] == 2500
+    @test jws[1]["thumbnail"]["url"] == "images/thumbnails/0001.jpg"
+    @test jws[1]["thumbnail"]["width"] == 32
+    @test jws[1]["thumbnail"]["height"] == 32
 end
 
 
 @testset "JSONWorkbook - deleteat!" begin
-    xf = joinpath(data_path, "examples.xlsx")
+    xf = joinpath(data_path, "othercase.xlsx")
     jwb = JSONWorkbook(xf)
-    @test length(jwb) == 4
+    @test length(jwb) == 6
     deleteat!(jwb, 1)
-    @test length(jwb) == 3
+    @test length(jwb) == 5
 
-    deleteat!(jwb, :example5)
-    @test length(jwb) == 2
-    @test_throws ArgumentError jwb[:example5]
+    deleteat!(jwb, :promotion)
+    @test length(jwb) == 4
+    @test_throws ArgumentError jwb[:promotion]
 end
 
 
-@testset "XLSX Readng - merge" begin
+@testset "JSONWorksheet - merge" begin
     xf = joinpath(data_path, "othercase.xlsx")
     jwb = JSONWorkbook(xf)
    
     ws1 = jwb[:mergeA]
     ws2 = jwb[:mergeB]
 
-    @test_throws MethodError merge(ws1, ws2, :Key)
+    @test_throws AssertionError merge(ws1, ws2, "/Something")
 
-    new_sheet = merge(ws1, ws2, "Key")
+    new_sheet = merge(ws1, ws2, "/Key")
     @test collect(keys(new_sheet[1])) == ["Key", "Address", "Name", "Property"]
+    @test_throws KeyError jwb[:mergeA][1]["Property"][1]["A"]
 
     jwb[:mergeA] = new_sheet
     @test keys(jwb[:mergeA][1]) == keys(new_sheet[1])
@@ -160,7 +151,41 @@ end
     @test jwb[:mergeA][1]["Address"]["TEL"] == [555,1111,2222]
     @test jwb[:mergeA][1]["Property"][1]["A"] == "Out"
     @test jwb[:mergeA][1]["Property"][2]["A"] == "think"
+
+    ws3 = jwb[:mergeC]
+    new_sheet = merge(ws1, ws3, "/Key")
+
+    @test length(new_sheet) == 6
+    @test ws1[1]["Address"]["TEL"] == [555,1111,2222] 
+    @test new_sheet[1]["Key"] == ws1[1]["Key"]
+    @test new_sheet[2]["Address"] == ws1[2]["Address"]
+
+    @test new_sheet[1]["Address"]["TEL"] == ws3[2]["Address"]["TEL"]
+    @test new_sheet[3]["Address"]["TEL"] == ws3[1]["Address"]["TEL"]
+
 end
+
+@testset "JSONWorksheet - append!" begin
+    xf = joinpath(data_path, "append.xlsx")
+    jwb = JSONWorkbook(xf)
+
+    ws1 = jwb["Sheet1"]
+    ws2 = jwb["Sheet2"]
+    ws3 = jwb["Sheet3"]
+
+    @test length(ws1) == 1
+    @test length(ws2) == 2
+    
+    append!(ws1, ws2)
+    @test length(ws1) == 3
+    @test length(ws2) == 2
+
+    @test ws1[2] == ws2[1]
+    @test ws1[3] == ws2[2]
+
+    @test_throws AssertionError append!(ws1, ws3)
+end 
+
 
 @testset "XLSX Readng - Asserts" begin
     xf = joinpath(data_path, "assert.xlsx")
@@ -168,20 +193,22 @@ end
     @test_throws AssertionError JSONWorksheet(xf, "dup2")
     @test_throws AssertionError JSONWorksheet(xf, "dup3")
 
+    @test_throws MethodError JSONWorksheet(xf, "dict_array")
+    @test_broken JSONWorksheet(xf, "array_dict")
+
     @test_throws AssertionError JSONWorksheet(xf, "start_line")
-    @test isa(JSONWorksheet(xf, "start_line";start_line=2), JSONWorksheet)
+    @test JSONWorksheet(xf, "start_line";start_line=2) isa JSONWorksheet
     @test_throws AssertionError JSONWorksheet(xf, "empty")
 end
 
 @testset "XLSX Readng - missingdata" begin
     xf = joinpath(data_path, "othercase.xlsx")
     jws = JSONWorksheet(xf, "Missing")
-    data = jws.data
 
     @test size(jws) == (5, 4)
-    @test ismissing(data[4]["Data"]["A"])
-    @test all(broadcast(el -> ismissing(el["AllNull"]), data))
-    @test collect(keys(jws.data[1])) == ["Key", "Data", "AllNull"]
+    @test ismissing(jws[4]["Data"]["A"])
+    @test all(broadcast(el -> ismissing(el["AllNull"]), jws))
+    @test collect(keys(jws[1])) == ["Key", "Data", "AllNull"]
 end
 
 @testset "XLSX Readng - type" begin

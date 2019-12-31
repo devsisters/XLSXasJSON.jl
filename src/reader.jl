@@ -1,192 +1,39 @@
-const REG_VECTOR = r"(\(\))|(\(Float64\))|(\(Float\))|(\(Int\))"
-
-function determine_datatype(key)::Tuple
-    # [idx,key]
-    VALUE_TYPE = Any
-    
-    if occursin(r"\[.+\]", key) #[*]
-        m = match(r"\[(\d+)]", key) # Primitive type
-        if isnothing(m)
-            if !occursin(REG_VECTOR, key)
-                throw(AssertionError("Specify index inside '[]' in $key"))
-            end
-            VALUE_TYPE = vector_element_datatype(key)
-            key = replace(key, REG_VECTOR => "")
-            m = match(r"\[(\d+)]", key)
-
-        end
-        k = parse(Int, m.captures[1])
-
-    # key(), key(T)
-    elseif occursin(REG_VECTOR, key) # *(*)
-        k = replace(key, REG_VECTOR => "")
-        VALUE_TYPE = vector_element_datatype(key)
-    else
-        k = key 
-    end
-
-    return (k ,VALUE_TYPE)
-end
-
-function vector_element_datatype(key)
-    m = match(REG_VECTOR, key)
-    T = m.match == "()" ? Any :
-            lowercase(m.match) == "(int)" ? Int :
-            lowercase(m.match) == "(float)" ? Float64 : 
-            lowercase(m.match) == "(float64)" ? Float64 : 
-            throw(MethodError(determine_datatype, key))
-    return Array{T, 1}
-end
-
 """
-    XLSXWrapperMeta
-
-cnames - column names from worksheet
-map - 각 컬럼명을 연속된 Key와 Idx로 만들어 저장된다
-      Key일 경우 Dict
-      Idx일 경우 Vector에서 위치를 나타낸다
-
+    JSONWorksheet
 """
-struct XLSXWrapperMeta{K,V} <: AbstractDict{K,V}
-    map::AbstractDict{K,V}
-    delim
-end
-function XLSXWrapperMeta(cnames, delim = nothing)
-    @assert allunique(cnames) "Column names must be unique, check for duplication in \n$cnames"
-    del = delim === nothing ? ";" : delim
-    
-    map = OrderedDict{String, Any}()
-    jsonkeys = Array{Any}(undef, length(cnames))
-    
-    @inbounds for (i, key) in enumerate(cnames)
-        key = string(key)
-        jk = split(key, ".")
-        # last key has Type info
-        endkey, T = determine_datatype(jk[end])
-        if isa(endkey, Array)
-            jk = [jk[1:end-1]; endkey]
-        else
-            jk[end] = endkey
-        end
-        jsonkeys[i] = jk
-        map[key] = (T, jk)
-    end
-    @assert allunique(jsonkeys) "Nested JSON keys must be unique, check for duplication within \n$jsonkeys"
-
-    XLSXWrapperMeta(map, del)
-end
-
-#fallback functions
-Base.iterate(x::XLSXWrapperMeta) = iterate(x.map)
-Base.iterate(x::XLSXWrapperMeta, i::Int) = iterate(x.map, i)
-Base.length(x::XLSXWrapperMeta) = length(x.map)
-
-Base.get(x::XLSXWrapperMeta, key, default) = get(x.map, key, default)
-Base.filter(f, x::XLSXWrapperMeta) = filter(f, x.map)
-function Base.merge(a::XLSXWrapperMeta, b::XLSXWrapperMeta)
-    cnames = [collect(keys(a.map)); collect(keys(b.map))]
-    if a.delim == b.delim 
-        del = a.delim
-    else 
-        del = join(unique(vcat(a.delim, b.delim)), "|") |> Regex
-    end
-    XLSXWrapperMeta(unique(cnames), del)
-end
-
-mutable struct XLSXWrapperData{T}
-    key::Union{AbstractString, Integer}
-    value::T
-end
-function Base.convert(::Type{T}, x::XLSXWrapperData{T2}) where {T<:AbstractDict, T2} 
-    T(Pair(x.key, x.value))
-end
-
-@inline function prepare_merge(x::XLSXWrapperData)
-    K = keytype(x) <: Integer ? Integer : AbstractString
-    convert(OrderedDict{K, Any}, x)
-end
-@inline function prepare_merge(x::XLSXWrapperData{T2}) where T2<:XLSXWrapperData
-    K = keytype(x) <: Integer ? Integer : AbstractString
-    OrderedDict{K, Any}(Pair(x.key, prepare_merge(x.value)))
-end
-
-
-Base.iterate(x::XLSXWrapperData) = iterate(x, 1)
-Base.iterate(x::XLSXWrapperData, i) = i > length(1) ? nothing : Pair(x.key, x.value)
-
-Base.keytype(x::XLSXWrapperData) = typeof(x.key)
-Base.valtype(x::XLSXWrapperData{T}) where T = T
-
-recursive_merge(x::XLSXWrapperData) = convert(OrderedDict, x)
-function recursive_merge(d::XLSXWrapperData, others::XLSXWrapperData...)
-    merge(recursive_merge, 
-        prepare_merge(d), 
-        prepare_merge.(others)...)
-end
-#TODO: merge 없애고 recursive_merge 만으로 돌아가도록 override 할 것!
-recursive_merge(x::AbstractDict...) = merge(recursive_merge, x...)
-recursive_merge(d::AbstractDict, x::AbstractDict...) = merge(recursive_merge, d, x...)
-
-"""
-    collect_vecdict!(x::T) where {T <: AbstractDict}
-
-overwrites `Dict{K<:Integer,V} to Array{Dict, 1}` recursively
-"""
-collect_vecdict(x) = x
-function collect_vecdict(x::T) where {T <: AbstractDict}
-    @inbounds for k in keys(x)
-        v = collect_vecdict(x[k])
-        if isa(v, Array{T2, 1} where T2)
-            # TODO T2 = @eval $(Symbol(T.name))
-            nd = OrderedDict(Pair(k, collect_vecdict(x[k])))
-            x = merge(x, nd)
-        else
-            x[k] = v
-        end
-    end
-    return x
-end
-
-function collect_vecdict(x::AbstractDict{K,V}) where {K <: Integer, V}
-    # sort by IntegerKey and dropmissing 
-    sort!(x)
-    r = collect(values(x))
-    check_missing = Int[]
-    @inbounds for (i, el) in enumerate(r)
-        if all(ismissing.(values(el))) 
-            push!(check_missing, i)
-        end
-    end
-    deleteat!(r, check_missing)
-
-    return r
-end
-
-#===================================================================================
- Interfaces
-
-===================================================================================#
-
 mutable struct JSONWorksheet
     xlsxpath::String
-    meta::XLSXWrapperMeta
-    data::Array{T, 1} where T <: AbstractDict
+    pointer::Array{JSONPointer, 1}
+    data::Array{T, 1} where T 
     sheetname::String
 end
 function JSONWorksheet(xlsxpath, arr::Array{T, 2}, sheet, delim) where T
     arr = dropmissing(arr)
-    @assert !isempty(arr) "$(xlsxpath)!$(sheet) does not contains any data, try change optional argument'start_line'"
+    @assert !isempty(arr) "'$(xlsxpath)!$(sheet)' does not contains any data, try change optional argument'start_line'"
 
-    meta = XLSXWrapperMeta(arr[1, :], delim)
-    data = map(i -> construct_dict(meta, arr[i, :]), 2:size(arr, 1))
-    data = collect_vecdict.(data)
+    pointers = broadcast(el -> JSONPointer(el), arr[1, :])
+    real_keys = map(el -> el.key, pointers)
+    if !allunique(real_keys) 
+        throw(AssertionError("column names must be unique, check for duplication $(arr[1, :])"))
+    end
 
-    JSONWorksheet(xlsxpath, meta, data, string(sheet))
+    template = create_by_pointer(OrderedDict, pointers)
+    data = Array{typeof(template), 1}(undef, size(arr, 1)-1)
+    for i in 1:length(data)
+        v = deepcopy(template)
+        data[i] = v
+        row = arr[i+1, :]
+        @inbounds for (col, p) in enumerate(pointers)
+            v[p] = collect_cell(p, row[col], delim)
+        end
+    end
+
+    JSONWorksheet(xlsxpath, pointers, data, string(sheet))
 end
 function JSONWorksheet(xf::XLSX.XLSXFile, sheet;
                        start_line = 1, 
                        row_oriented = true, 
-                       delim = nothing)
+                       delim = ";")
     ws = isa(sheet, Symbol) ? xf[string(sheet)] : xf[sheet]
     sheet = ws.name
     # orientation handling
@@ -236,42 +83,36 @@ end
     return arr[rows, :]
 end
 
-@inline function construct_dict(meta::XLSXWrapperMeta, singlerow)
-    result = Array{XLSXWrapperData, 1}(undef, length(meta))
-    for (i, el) in enumerate(meta)
-        T, steps = el[2]
-        value = singlerow[i]
-        if T <: Array{T2, 1} where T2
-            if !ismissing(value)
-                if isa(value, AbstractString)
-                    x = filter(!isempty, split(value, meta.delim))
-                    value = strip.(x) #Remove white spaces
-                    if T <: Array{T3, 1} where T3 <: Real
-                        try 
-                            value = parse.(eltype(T), value)
-                        catch
-                            @warn "fail to parse $(value) to $T"
-                        end 
-                    end
-                else
-                    if T <: Array{T3, 1} where T3 <: AbstractString
-                        value = [string(value)]
-                    else
-                        value = [value]
-                    end
+# TODO Add type check here
+function collect_cell(p, cell, delim)
+    T = p.valuetype
+    if T <: AbstractArray
+        if isa(cell, AbstractString)
+            val = split(cell, delim)
+            isempty(val[end]) && pop!(val)
+            if eltype(T) <: Real 
+                val = parse.(eltype(T), val)
+            elseif eltype(T) <: AbstractString 
+                val = string.(val)
+            end
+        else 
+            if eltype(T) <: Real
+                if isa(cell, AbstractString) 
+                    val = parse(eltype(T), cell)
+                else 
+                    val = cell 
                 end
+            elseif eltype(T) <: AbstractString
+                val = string(cell)
+            else 
+                val = cell 
             end
+            val = convert(T, [val])
         end
-        
-        x = XLSXWrapperData(steps[end], value)
-        if length(steps) > 1
-            @inbounds for k in reverse(steps[1:end-1])
-                x = XLSXWrapperData(k, x)
-            end
-        end
-        result[i] = x
+    else 
+        val = cell
     end
-    return recursive_merge(result...)
+    return val
 end
 
 data(jws::JSONWorksheet) = getfield(jws, :data)
@@ -281,47 +122,67 @@ sheetnames(jws::JSONWorksheet) = getfield(jws, :sheetname)
 Base.iterate(jws::JSONWorksheet) = iterate(data(jws))
 Base.iterate(jws::JSONWorksheet, i) = iterate(data(jws), i)
 
-Base.size(jws::JSONWorksheet) = (length(jws.data), length(jws.meta))
+Base.size(jws::JSONWorksheet) = (length(jws.data), length(jws.pointer))
 function Base.size(jws::JSONWorksheet, d)
     d == 1 ? length(jws.data) : 
-    d == 2 ? length(jws.meta) : throw(DimensionMismatch("only 2 dimensions of `JSONWorksheets` object are measurable"))
+    d == 2 ? length(jws.pointer) : throw(DimensionMismatch("only 2 dimensions of `JSONWorksheets` object are measurable"))
 end
 Base.length(jws::JSONWorksheet) = length(data(jws))
 Base.getindex(jws::JSONWorksheet, i) = getindex(data(jws), i)
 Base.getindex(jws::JSONWorksheet, i1::Int, i2::Int, I::Int...) = getindex(data(jws), i1, i2, I...)
 Base.lastindex(jws::JSONWorksheet) = lastindex(data(jws))
 
+"""
+    merge(a::JSONWorksheet, b::JSONWorksheet, bykey::AbstractString)
 
+Construct a merged JSONWorksheet from the given JSONWorksheets.
+If the same JSONPointer is present in another collection, the value for that key will be the      
+value it has in the last collection listed.
+"""
 function Base.merge(a::JSONWorksheet, b::JSONWorksheet, bykey::AbstractString)
-    @assert haskey(a.meta, bykey) "JSONWorksheet-$(a.sheetname) do not has `$bykey`"
-    @assert haskey(b.meta, bykey) "JSONWorksheet-$(b.sheetname) do not has `$bykey`"
+    key = JSONPointer(bykey)
     
-    output = a.data
-    for row in output
-        k = row[bykey]
-        sender = filter(el -> el[bykey] == k, b.data)
-        if !isempty(sender)
-            @assert length(sender) == 1 "JSONWorksheet-$(b.sheetname) has more than 1 row of `$bykey`"
+    @assert in(key, a.pointer) "JSONWorksheet-$(a.sheetname) do not has `$key`"
+    @assert in(key, b.pointer) "JSONWorksheet-$(b.sheetname) do not has `$key`"
+    
+    pointers = unique([a.pointer; b.pointer])
 
-            merge!(row, sender[1])
+    keyvalues_a = map(el -> el[key], a.data)
+    keyvalues_b = map(el -> el[key], b.data)
+    ind = indexin(keyvalues_b, keyvalues_a)
+
+    data = deepcopy(a.data)
+    for (i, _b) in enumerate(b.data)
+        j = ind[i]
+        if isnothing(j)
+            _a = deepcopy(_b)
+            for p in a.pointer 
+                _a[p] = empty_value(p)
+            end 
+            push!(data, _a) 
+        else 
+            _a = data[j]
+        end
+        for p in b.pointer 
+            _a[p] = _b[p]
         end
     end
-
-    if length(unique([keys(a.meta)... keys(b.meta)...])) > length(keys(a.meta)) + length(keys(b.meta)) - 1
-        @warn "There are duplicated key within sheets, data in '$(a.sheetname)' will be overwritten by '$(b.sheetname)'"
-    end
-    meta = merge(a.meta, b.meta)
-
-    JSONWorksheet(a.xlsxpath, meta, output, a.sheetname)
+    JSONWorksheet(b.xlsxpath, pointers, data, b.sheetname)
 end
 function Base.append!(a::JSONWorksheet, b::JSONWorksheet)
-    @assert keys(a.meta) == keys(b.meta) "Column names must be same for append!\n $(setdiff(keys(a.meta), keys(b.meta)))"
+    ak = map(el -> el.key, keys(a)) 
+    bk = map(el -> el.key, keys(b))
+    
+    if sort(ak) != sort(bk)
+        throw(AssertionError("""Column names must be same for append!
+         $(setdiff(collect(ak), collect(bk)))"""))
+    end
 
     append!(a.data, b.data)
 end
 
-# TODO 임시 함수임... 더 robust 하게 수정필요
-function Base.sort!(jws::JSONWorksheet, key; kwargs...)
+function Base.sort!(jws::JSONWorksheet, bykey; kwargs...)
+    key = JSONPointer(bykey)
     sorted_idx = sortperm(map(el -> el[key], data(jws)); kwargs...)
     jws.data = data(jws)[sorted_idx]
 end
@@ -377,6 +238,7 @@ end
 hassheet(jwb::JSONWorkbook, s::Symbol) = haskey(jwb.sheetindex, s)
 sheetnames(jwb::JSONWorkbook) = names(jwb.sheetindex)
 xlsxpath(jwb::JSONWorkbook) = jwb.xlsxpath
+Base.keys(jws::JSONWorksheet) = jws.pointer
 
 getsheet(jwb::JSONWorkbook, i) = jwb.sheets[i]
 getsheet(jwb::JSONWorkbook, s::AbstractString) = getsheet(jwb, jwb.sheetindex[s])
