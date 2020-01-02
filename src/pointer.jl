@@ -1,14 +1,14 @@
 const TOKEN_PREFIX = '/'
 """
-    JSONPointer
+    JSONPointer(token)
 
 Follows https://tools.ietf.org/html/rfc6901 standard
 
-# Differences are 
+### Differences are 
 - Index numbers starts from '1' instead of '0'  
-- '()', '(Int)', '(Float)', '(String)' will evaluate Json value to Array 
+- Declare type with '::T' notation at the end 
 
-# Example
+### Example
 """
 struct JSONPointer 
     token::Tuple
@@ -41,9 +41,9 @@ end
 function empty_value(p::JSONPointer)
     VT = p.valuetype
     if VT <: Array 
-        eltype(VT) <: Real ? zeros(eltype(VT), 1) : 
-        eltype(VT) <: AbstractString ? AbstractString[""] :
-        Any[missing]
+        eltype(VT) <: Real ? eltype(VT)[] : 
+        eltype(VT) <: AbstractString ? AbstractString[] :
+        Any[]
     elseif VT <: Real 
         zero(VT) 
     else 
@@ -105,10 +105,12 @@ function setindex_by_pointer!(collection::T, v, p::JSONPointer) where T <: Abstr
     #     @warn "'$(v)' is not matching valuetype of $(p)"
     # end
     prev = collection
-    # TODO 최상단이 Array일 경우에도 올바른 Dict타입 찾아주기
-    DT = isa(prev, AbstractDict) ? typeof(prev) : OrderedDict{String, Any}
+    DT = OrderedDict{String, Any}
 
     @inbounds for (i, k) in enumerate(p.token)
+        if isa(prev, AbstractDict) 
+            DT = typeof(prev)
+        end
         if isa(prev, Array)
             if !isa(k, Integer)
                 throw(MethodError(setindex!, k))

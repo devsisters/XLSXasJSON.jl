@@ -42,7 +42,7 @@ data_path = joinpath(@__DIR__, "data")
     @test a1[e] == [1., 2.]
 end
 
-@testset "JSONPointer hard case" begin
+@testset "JSONPointer complex" begin
     p = XLSXasJSON.JSONPointer("/3/a/1/b")
     @test p.token == (3, "a", 1, "b")
 
@@ -62,6 +62,13 @@ end
     @test d[1]["a"][2] isa OrderedDict
 end
 
+@testset "JSONPointer typecheck" begin
+    # a = XLSXasJSON.JSONPointer("/int::Int")
+
+    # d = Dict(a)
+    # d[a] = "k"
+
+end
 
 # testdata
 @testset "Adobe Spry Examples" begin

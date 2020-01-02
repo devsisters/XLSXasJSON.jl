@@ -12,8 +12,8 @@ function JSONWorksheet(xlsxpath, arr::Array{T, 2}, sheet, delim) where T
     @assert !isempty(arr) "'$(xlsxpath)!$(sheet)' does not contains any data, try change optional argument'start_line'"
 
     p = map(el -> begin 
-                    startswith(el, "/") ? JSONPointer(el) : 
-                                          JSONPointer("/"*el) 
+                    startswith(el, TOKEN_PREFIX) ? 
+                        JSONPointer(el) : JSONPointer(TOKEN_PREFIX * el) 
                 end, arr[1, :])
     real_keys = map(el -> el.token, p)
     if !allunique(real_keys) 
@@ -31,7 +31,7 @@ function JSONWorksheet(xlsxpath, arr::Array{T, 2}, sheet, delim) where T
         end
     end
 
-    JSONWorksheet(xlsxpath, p, data, string(sheet))
+    JSONWorksheet(normpath(xlsxpath), p, data, string(sheet))
 end
 function JSONWorksheet(xf::XLSX.XLSXFile, sheet;
                        start_line = 1, 
