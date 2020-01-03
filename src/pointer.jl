@@ -38,15 +38,24 @@ function JSONPointer(token::AbstractString)
     JSONPointer(tuple(jk...), T) 
 end
 
-function empty_value(p::JSONPointer)
+""" 
+    null_value(p::JSONPointer)
+
+provide appropriate value for p.valuetype. 
+'Real' return 'zero(T)' and 'AbstractString' returns '""'
+if null_value should return for missing, use 'Any' or 'Union{T, Missing}'
+"""
+function null_value(p::JSONPointer)
     VT = p.valuetype
     if VT <: Array 
         eltype(VT) <: Real ? eltype(VT)[] : 
-        eltype(VT) <: AbstractString ? AbstractString[] :
+        eltype(VT) <: AbstractString ? eltype(VT)[] :
         Any[]
     elseif VT <: Real 
         zero(VT) 
-    else 
+    elseif VT <: AbstractString
+        ""
+    else # Others types not 
         missing
     end  
 end
@@ -61,17 +70,18 @@ function create_by_pointer(::Type{T}, p::JSONPointer) where T <: AbstractDict
         k = p.token[i]
         if isa(k, Integer)
             tmp = Array{Any, 1}(missing, k)
-            if i == length(p)
-            else 
-                tmp[k] = val
-            end
+            tmp[k] = if i == length(p)
+                        null_value(p)
+                    else 
+                        val
+                    end
             val = tmp 
         elseif isa(k, AbstractString)
-            if i == length(p)
-                val = T{String, Any}(k => empty_value(p))
-            else 
-                val = T{String, Any}(k => val)
-            end
+            val = if i == length(p)
+                    T{String, Any}(k => null_value(p))
+                else 
+                    T{String, Any}(k => val)
+                end
         end
     end
     return val
@@ -81,7 +91,7 @@ function create_by_pointer(::Type{T}, arr::Array) where T <: AbstractDict
     template = T(arr[1])
     if length(arr) > 1
         @inbounds for p in arr
-            template[p] = empty_value(p)
+            template[p] = null_value(p)
         end
     end
     return template
@@ -101,9 +111,10 @@ function getindex_by_pointer(collection, p::JSONPointer, i = 1)
 end
 
 function setindex_by_pointer!(collection::T, v, p::JSONPointer) where T <: AbstractDict
-    # if !isa(v, p.valuetype)
-    #     @warn "'$(v)' is not matching valuetype of $(p)"
-    # end
+    if !isa(v, p.valuetype)
+        v = convert(p.valuetype, v)
+        # throw(ArgumentError("$v is not valid type for $p use '::Any' to supress this Error"))
+    end
     prev = collection
     DT = OrderedDict{String, Any}
 

@@ -160,7 +160,7 @@ function Base.merge(a::JSONWorksheet, b::JSONWorksheet, bykey::AbstractString)
         if isnothing(j)
             _a = deepcopy(_b)
             for p in a.pointer 
-                _a[p] = empty_value(p)
+                _a[p] = null_value(p)
             end 
             push!(data, _a) 
         else 

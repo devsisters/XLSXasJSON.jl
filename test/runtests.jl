@@ -51,22 +51,36 @@ end
     @test d[3] isa Dict
     @test d[3]["a"][1] isa Dict
 
-    p = XLSXasJSON.JSONPointer("/1/a/2/b")
-    @test p.token == (1, "a", 2, "b")
+    p = XLSXasJSON.JSONPointer("/1/a/3::Vector{Int}")
+    @test p.token == (1, "a", 3)
     d = OrderedDict(p)
 
     @test d isa Array
     @test d[1] isa OrderedDict
     @test d[1]["a"] isa Array
     @test d[1]["a"][1] |> ismissing
-    @test d[1]["a"][2] isa OrderedDict
+    @test d[1]["a"][2] |> ismissing
+    @test d[1]["a"][3] isa Vector{Int}
+
 end
 
 @testset "JSONPointer typecheck" begin
-    # a = XLSXasJSON.JSONPointer("/int::Int")
+    a = XLSXasJSON.JSONPointer("/int::Int")
+    b = XLSXasJSON.JSONPointer("/int_array::Vector{Int}")
 
-    # d = Dict(a)
-    # d[a] = "k"
+    a1 = Dict(a)
+    @test a1[a] == XLSXasJSON.null_value(a) == 0
+    @test_throws MethodError a1[a] = "a"
+
+    b1 = Dict(b)
+    @test b1[b] == XLSXasJSON.null_value(b) == Int[]
+    @test_throws MethodError b1[b] = 1
+    # @test_throws MethodError b1[b] = Any[]
+
+    # TODO User Defined type
+    struct Foo 
+    end
+    @test_broken c = XLSXasJSON.JSONPointer("/foo::Foo")
 
 end
 
