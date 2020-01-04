@@ -6,21 +6,20 @@ Follows https://tools.ietf.org/html/rfc6901 standard
 
 ### Differences are 
 - Index numbers starts from '1' instead of '0'  
-- Declare type with '::T' notation at the end 
+- User can declare type with '::T' notation at the end 
 
 ### Example
 """
-struct JSONPointer 
+struct JSONPointer{T} 
     token::Tuple
-    valuetype::DataType 
 end
 function JSONPointer(token::AbstractString)
     if !startswith(token, TOKEN_PREFIX) 
         throw(ArgumentError("JSONPointer must starts with '/' prefix"))
     end
     
-    jk = convert(Array{Any, 1}, split(chop(token; head=1, tail=0), TOKEN_PREFIX))
     T = Any
+    jk = convert(Array{Any, 1}, split(chop(token; head=1, tail=0), TOKEN_PREFIX))
     if occursin("::", jk[end])
         x = split(jk[end], "::")
         jk[end] = x[1]
@@ -35,29 +34,27 @@ function JSONPointer(token::AbstractString)
         end
     end
 
-    JSONPointer(tuple(jk...), T) 
+    JSONPointer{T}(tuple(jk...)) 
 end
 
 """ 
-    null_value(p::JSONPointer)
+    null_value(p::JSONPointer{T}) where T
 
-provide appropriate value for p.valuetype. 
+provide appropriate value for 'T'
 'Real' return 'zero(T)' and 'AbstractString' returns '""'
-if null_value should return for missing, use 'Any' or 'Union{T, Missing}'
+
+If user wants different null value for 'T' override 'null_value(p::JSONPointer{T})' method 
+
 """
-function null_value(p::JSONPointer)
-    VT = p.valuetype
-    if VT <: Array 
-        eltype(VT) <: Real ? eltype(VT)[] : 
-        eltype(VT) <: AbstractString ? eltype(VT)[] :
-        Any[]
-    elseif VT <: Real 
-        zero(VT) 
-    elseif VT <: AbstractString
-        ""
-    else # Others types not 
-        missing
-    end  
+null_value(p::JSONPointer{<:AbstractString}) = ""
+null_value(p::JSONPointer{T}) where T = missing 
+function null_value(p::JSONPointer{T}) where T <: Real 
+    zero(T) 
+end
+function null_value(p::JSONPointer{T}) where T <: Array
+    eltype(T) <: Real ? eltype(T)[] : 
+    eltype(T) <: AbstractString ? eltype(T)[] :
+    Any[]
 end
 
 Base.Dict(p::JSONPointer) = create_by_pointer(Dict, p)
@@ -111,8 +108,8 @@ function getindex_by_pointer(collection, p::JSONPointer, i = 1)
 end
 
 function setindex_by_pointer!(collection::T, v, p::JSONPointer) where T <: AbstractDict
-    if !isa(v, p.valuetype)
-        v = convert(p.valuetype, v)
+    if !isa(v, eltype(p))
+        v = convert(eltype(p), v)
         # throw(ArgumentError("$v is not valid type for $p use '::Any' to supress this Error"))
     end
     prev = collection
@@ -165,9 +162,14 @@ function grow_array!(arr, target_size)
 end
 
 Base.length(x::JSONPointer) = length(x.token)
+Base.eltype(x::JSONPointer{T}) where T = T
 
-function Base.show(io::IO, x::JSONPointer)
-    print(io, "Pointer(\"/", join(x.token, "/"), "\", ", 
-                x.valuetype, ")")
+macro j_str(token) 
+    JSONPointer(token) 
+end
+
+function Base.show(io::IO, x::JSONPointer{T}) where T
+    print(io, 
+    "JSONPointer{", T, "}(\"/", join(x.token, "/"), "\")")
 end
 

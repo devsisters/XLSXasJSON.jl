@@ -16,9 +16,9 @@ data_path = joinpath(@__DIR__, "data")
     @test a.token == ("a", 1, "c")
     @test b.token == ("a", 5)
     @test c.token == ("a", 2, "d")
-    @test c.valuetype <: Array
-    @test d.valuetype <: Array{Int, 1}
-    @test e.valuetype <: Array{Float64, 1}
+    @test eltype(c) <: Array
+    @test eltype(d) <: Array{Int, 1}
+    @test eltype(e) <: Array{Float64, 1}
 
     @test_throws ArgumentError XLSXasJSON.JSONPointer("1")
     @test_throws ArgumentError XLSXasJSON.JSONPointer("a")

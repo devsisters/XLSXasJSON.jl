@@ -87,8 +87,7 @@ end
 end
 
 # TODO Add type check here
-function collect_cell(p, cell, delim)
-    T = p.valuetype
+function collect_cell(p::JSONPointer{T}, cell, delim) where T
     if T <: AbstractArray
         if isa(cell, AbstractString)
             val = split(cell, delim)
