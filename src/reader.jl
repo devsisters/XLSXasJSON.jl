@@ -9,7 +9,7 @@ mutable struct JSONWorksheet
 end
 function JSONWorksheet(xlsxpath, arr::Array{T, 2}, sheet, delim) where T
     arr = dropmissing(arr)
-    @assert !isempty(arr) "'$(xlsxpath)!$(sheet)' does not contains any data, try change optional argument'start_line'"
+    @assert !isempty(arr) "'$(xlsxpath)!$(sheet)' don't have valid column names, try change optional argument'start_line'"
 
     p = map(el -> begin 
                     startswith(el, TOKEN_PREFIX) ? 

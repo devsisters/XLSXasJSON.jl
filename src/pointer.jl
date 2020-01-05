@@ -107,10 +107,15 @@ function getindex_by_pointer(collection, p::JSONPointer, i = 1)
     return val
 end
 
-function setindex_by_pointer!(collection::T, v, p::JSONPointer) where T <: AbstractDict
-    if !isa(v, eltype(p))
-        v = convert(eltype(p), v)
-        # throw(ArgumentError("$v is not valid type for $p use '::Any' to supress this Error"))
+function setindex_by_pointer!(collection::T, v, p::JSONPointer{U}) where {T <: AbstractDict, U}
+    if !isa(v, U)
+        try 
+            v = convert(eltype(p), v)
+        catch e 
+            msg = isa(v, Array) ? "Vector" : "Any"
+            error("$v is not valid value for $p use '::$msg' if you don't need static type")
+            throw(e)
+        end
     end
     prev = collection
     DT = OrderedDict{String, Any}

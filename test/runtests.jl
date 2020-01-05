@@ -62,6 +62,11 @@ end
     @test d[1]["a"][2] |> ismissing
     @test d[1]["a"][3] isa Vector{Int}
 
+    a = XLSXasJSON.JSONPointer("/1/a")
+    b = XLSXasJSON.JSONPointer("/b/1")
+
+    # @test_throws XLSXasJSON.create_by_pointer(Dict, [a,b])
+
 end
 
 @testset "JSONPointer typecheck" begin
@@ -70,12 +75,12 @@ end
 
     a1 = Dict(a)
     @test a1[a] == XLSXasJSON.null_value(a) == 0
-    @test_throws MethodError a1[a] = "a"
+    @test_throws ErrorException a1[a] = "a"
 
     b1 = Dict(b)
     @test b1[b] == XLSXasJSON.null_value(b) == Int[]
-    @test_throws MethodError b1[b] = 1
-    # @test_throws MethodError b1[b] = Any[]
+    @test_throws ErrorException b1[b] = 1
+    @test_throws ErrorException b1[b] = [1, "a"]
 
     # TODO User Defined type
     struct Foo 
