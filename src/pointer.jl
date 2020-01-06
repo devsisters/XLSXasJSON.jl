@@ -108,6 +108,7 @@ function getindex_by_pointer(collection, p::JSONPointer, i = 1)
 end
 
 function setindex_by_pointer!(collection::T, v, p::JSONPointer{U}) where {T <: AbstractDict, U}
+    v = ismissing(v) ? null_value(p) : v
     if !isa(v, U)
         try 
             v = convert(eltype(p), v)
