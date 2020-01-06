@@ -86,33 +86,35 @@ end
     return arr[rows, :]
 end
 
-# TODO Add type check here
 function collect_cell(p::JSONPointer{T}, cell, delim) where T
-    if T <: AbstractArray
-        if isa(cell, AbstractString)
-            val = split(cell, delim)
-            isempty(val[end]) && pop!(val)
-            if eltype(T) <: Real 
-                val = parse.(eltype(T), val)
-            elseif eltype(T) <: AbstractString 
-                val = string.(val)
+    if ismissing(cell) 
+        val = null_value(p)
+    else
+        if T <: AbstractArray
+            if isa(cell, AbstractString)
+                val = split(cell, delim)
+                isempty(val[end]) && pop!(val)
+                if eltype(T) <: Real 
+                    val = parse.(eltype(T), val)
+                elseif eltype(T) <: AbstractString 
+                    val = string.(val)
+                end
+            else 
+                val = cell
+                if eltype(T) <: Real
+                    if isa(cell, AbstractString) 
+                        val = parse(eltype(T), cell)
+                    end
+                elseif eltype(T) <: AbstractString
+                    if !isa(cell, AbstractString)
+                        val = string(cell)
+                    end
+                end
+                val = convert(T, [val])
             end
         else 
-            if eltype(T) <: Real
-                if isa(cell, AbstractString) 
-                    val = parse(eltype(T), cell)
-                else 
-                    val = cell 
-                end
-            elseif eltype(T) <: AbstractString
-                val = string(cell)
-            else 
-                val = cell 
-            end
-            val = convert(T, [val])
+            val = cell
         end
-    else 
-        val = cell
     end
     return val
 end

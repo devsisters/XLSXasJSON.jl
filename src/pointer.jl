@@ -46,11 +46,7 @@ provide appropriate value for 'T'
 If user wants different null value for 'T' override 'null_value(p::JSONPointer{T})' method 
 
 """
-null_value(p::JSONPointer{<:AbstractString}) = ""
 null_value(p::JSONPointer{T}) where T = missing 
-function null_value(p::JSONPointer{T}) where T <: Real 
-    zero(T) 
-end
 function null_value(p::JSONPointer{T}) where T <: Array
     eltype(T) <: Real ? eltype(T)[] : 
     eltype(T) <: AbstractString ? eltype(T)[] :
