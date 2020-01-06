@@ -8,7 +8,7 @@ mutable struct JSONWorksheet
     sheetname::String
 end
 function JSONWorksheet(xlsxpath, arr::Array{T, 2}, sheet, delim) where T
-    arr = dropmissing(arr)
+    arr = dropemptyrange(arr)
     @assert !isempty(arr) "'$(xlsxpath)!$(sheet)' don't have valid column names, try change optional argument'start_line'"
 
     p = map(el -> begin 
@@ -59,7 +59,7 @@ function JSONWorksheet(xlsxpath, sheet; kwargs...)
     close(xf)
     return x
 end
-@inline function dropmissing(arr::Array{T, 2}) where T
+@inline function dropemptyrange(arr::Array{T, 2}) where T
     cols = falses(size(arr, 2))
     @inbounds for c in 1:size(arr, 2)
         # There must be a column name, or it's a commet line
