@@ -169,7 +169,7 @@ function Base.merge(a::JSONWorksheet, b::JSONWorksheet, bykey::AbstractString)
             _a[p] = _b[p]
         end
     end
-    JSONWorksheet(b.xlsxpath, pointers, data, b.sheetname)
+    JSONWorksheet(a.xlsxpath, pointers, data, a.sheetname)
 end
 function Base.append!(a::JSONWorksheet, b::JSONWorksheet)
     ak = map(el -> el.token, keys(a)) 
