@@ -148,7 +148,6 @@ This is a more complete row oriented example
 | Fooood | 100;200;300 | Cake | 50 | Chocolate | 19 | Ingredient | Salt;100 |
 
 would produce
-
 ```json
 [
   {
