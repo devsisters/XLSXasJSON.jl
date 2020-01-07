@@ -74,7 +74,8 @@ end
     b = XLSXasJSON.JSONPointer("/int_array::Vector{Int}")
 
     a1 = Dict(a)
-    @test a1[a] == XLSXasJSON.null_value(a) == 0
+    @test ismissing(XLSXasJSON.null_value(a))
+    @test ismissing(a1[a])
     @test_throws ErrorException a1[a] = "a"
 
     b1 = Dict(b)
