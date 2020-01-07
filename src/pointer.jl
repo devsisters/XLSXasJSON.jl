@@ -57,7 +57,7 @@ Base.Dict(p::JSONPointer) = create_by_pointer(Dict, p)
 DataStructures.OrderedDict(p::JSONPointer) = create_by_pointer(OrderedDict, p)
 
 function create_by_pointer(::Type{T}, p::JSONPointer) where T <: AbstractDict
-    val = nothing
+    val = missing
 
     @inbounds for i in length(p):-1:1
         k = p.token[i]
