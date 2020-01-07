@@ -36,7 +36,7 @@ end
 function JSONWorksheet(xf::XLSX.XLSXFile, sheet;
                        start_line = 1, 
                        row_oriented = true, 
-                       delim = ";")
+                       delim = ",")
     ws = isa(sheet, Symbol) ? xf[string(sheet)] : xf[sheet]
     sheet = ws.name
     # orientation handling
