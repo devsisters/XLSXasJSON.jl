@@ -122,6 +122,7 @@ end
 data(jws::JSONWorksheet) = getfield(jws, :data)
 xlsxpath(jws::JSONWorksheet) = getfield(jws, :xlsxpath)
 sheetnames(jws::JSONWorksheet) = getfield(jws, :sheetname)
+Base.keys(jws::JSONWorksheet) = jws.pointer
 
 Base.iterate(jws::JSONWorksheet) = iterate(data(jws))
 Base.iterate(jws::JSONWorksheet, i) = iterate(data(jws), i)
@@ -132,9 +133,54 @@ function Base.size(jws::JSONWorksheet, d)
     d == 2 ? length(jws.pointer) : throw(DimensionMismatch("only 2 dimensions of `JSONWorksheets` object are measurable"))
 end
 Base.length(jws::JSONWorksheet) = length(data(jws))
+
+##############################################################################
+##
+## getindex() definitions
+##
+##############################################################################
 Base.getindex(jws::JSONWorksheet, i) = getindex(data(jws), i)
-Base.getindex(jws::JSONWorksheet, i1::Int, i2::Int, I::Int...) = getindex(data(jws), i1, i2, I...)
+Base.getindex(jws::JSONWorksheet, r::UnitRange) = getindex(data(jws), r)
+
 Base.lastindex(jws::JSONWorksheet) = lastindex(data(jws))
+
+@inline function Base.getindex(jws::JSONWorksheet, row_ind::Integer,
+                               col_ind::Union{Signed, Unsigned})
+    pointers = keys(jws)
+    @boundscheck begin
+        if !checkindex(Bool, eachindex(pointers), col_ind)
+            throw(BoundsError(jws, pointers[col_ind]))
+        end
+        if !checkindex(Bool, 1:length(jws), row_ind)
+            throw(BoundsError(data(jws), row_ind))
+        end
+    end
+
+    @inbounds jws[row_ind, pointers[col_ind]]
+end
+
+@inline function Base.getindex(jws::JSONWorksheet, row_ind::Integer, col_ind::JSONPointer)
+    @assert in(col_ind, keys(jws)) "$col_ind in not in $(summary(JSONWorksheet))"
+    @boundscheck begin
+        if !checkindex(Bool, 1:length(jws), row_ind)
+            throw(BoundsError(data(jws), row_ind))
+        end
+    end
+
+    @inbounds jws[row_ind][col_ind]
+end
+
+@inline function Base.getindex(jws::JSONWorksheet, row_inds::AbstractVector, col_ind::JSONPointer)
+    @assert in(col_ind, keys(jws)) "$col_ind in not in $(summary(JSONWorksheet))"
+    @boundscheck begin
+        if !checkindex(Bool, 1:length(jws), row_inds)
+            throw(BoundsError(data(jws), row_inds))
+        end
+    end
+    #TODO 
+    # @inbounds jws[row_inds][col_ind]
+end
+
 
 """
     merge(a::JSONWorksheet, b::JSONWorksheet, bykey::AbstractString)
@@ -191,108 +237,6 @@ function Base.sort!(jws::JSONWorksheet, bykey; kwargs...)
     jws.data = data(jws)[sorted_idx]
 end
 
-
-"""
-    JSONWorkBook
-Preserves XLSX WorkBook data structure
-"""
-mutable struct JSONWorkbook
-    xlsxpath::AbstractString
-    sheets::Vector{JSONWorksheet}
-    sheetindex::Index
-end
-
-function JSONWorkbook(xf::XLSX.XLSXFile, v::Vector{JSONWorksheet})
-    wsnames = sheetnames.(v)
-    index = Index(wsnames)
-    JSONWorkbook(xf.filepath, v, index)
-end
-# same kwargs for all sheets
-function JSONWorkbook(xf::XLSX.XLSXFile, sheets = XLSX.sheetnames(xf); kwargs...)
-    v = Array{JSONWorksheet, 1}(undef, length(sheets))
-    @inbounds for (i, s) in enumerate(sheets)
-        v[i] = JSONWorksheet(xf, s; kwargs...)
-    end
-    close(xf)
-
-    JSONWorkbook(xf, v)
-end
-# Different Kwargs per sheet
-function JSONWorkbook(xlsxpath::AbstractString, sheets, kwargs_per_sheet::Dict)
-    xf = XLSX.readxlsx(xlsxpath)
-
-    v = Array{JSONWorksheet, 1}(undef, length(sheets))
-    @inbounds for (i, s) in enumerate(sheets)
-        v[i] = JSONWorksheet(xf, s; kwargs_per_sheet[s]...)
-    end
-    close(xf)
-
-    JSONWorkbook(xf, v)
-end
-function JSONWorkbook(xlsxpath, sheets; kwargs...)
-    xf = XLSX.readxlsx(xlsxpath)
-    JSONWorkbook(xf, sheets; kwargs...)
-end
-function JSONWorkbook(xlsxpath; kwargs...)
-    xf = XLSX.readxlsx(xlsxpath)
-    JSONWorkbook(xf; kwargs...)
-end
-
-# JSONWorkbook fallback functions
-hassheet(jwb::JSONWorkbook, s::Symbol) = haskey(jwb.sheetindex, s)
-sheetnames(jwb::JSONWorkbook) = names(jwb.sheetindex)
-xlsxpath(jwb::JSONWorkbook) = jwb.xlsxpath
-Base.keys(jws::JSONWorksheet) = jws.pointer
-
-getsheet(jwb::JSONWorkbook, i) = jwb.sheets[i]
-getsheet(jwb::JSONWorkbook, s::AbstractString) = getsheet(jwb, jwb.sheetindex[s])
-getsheet(jwb::JSONWorkbook, s::Symbol) = getsheet(jwb, jwb.sheetindex[string(s)])
-Base.getindex(jwb::JSONWorkbook, i::UnitRange) = getsheet(jwb, i)
-Base.getindex(jwb::JSONWorkbook, i::Integer) = getsheet(jwb, i)
-Base.getindex(jwb::JSONWorkbook, s::AbstractString) = getsheet(jwb, s)
-Base.getindex(jwb::JSONWorkbook, s::Symbol) = getsheet(jwb, string(s))
-
-Base.length(jwb::JSONWorkbook) = length(jwb.sheets)
-Base.lastindex(jwb::JSONWorkbook) = length(jwb.sheets)
-Base.setindex!(jwb::JSONWorkbook, jws::JSONWorksheet, i1::Int) = setindex!(jwb.sheets, jws, i1)
-Base.setindex!(jwb::JSONWorkbook, jws::JSONWorksheet, s::Symbol) = setindex!(jwb, jws, string(s))
-Base.setindex!(jwb::JSONWorkbook, jws::JSONWorksheet, s::AbstractString) = setindex!(jwb.sheets, jws, jwb.sheetindex[s])
-
-function Base.deleteat!(jwb::JSONWorkbook, i::Integer)
-    deleteat!(getfield(jwb, :sheets), i)
-    s = sheetnames.(getfield(jwb, :sheets))
-    setfield!(jwb, :sheetindex, Index(s))
-    jwb
-end
-Base.deleteat!(jwb::JSONWorkbook, sheet::Symbol) = deleteat!(jwb, string(sheet))
-function Base.deleteat!(jwb::JSONWorkbook, sheet::AbstractString)
-    i = getfield(jwb, :sheetindex)[sheet]
-    deleteat!(jwb, i)
-end
-
-Base.iterate(jwb::JSONWorkbook) = iterate(jwb, 1)
-function Base.iterate(jwb::JSONWorkbook, st)
-    st > length(jwb) && return nothing
-    # TODO deprecate df
-    return (jwb[st], st + 1)
-end
-
-## Display
-function Base.summary(io::IO, jwb::JSONWorkbook)
-    @printf(io, "JSONWorkbook(\"%s\") containing %i Worksheets\n",
-                basename(xlsxpath(jwb)), length(jwb))
-end
-function Base.show(io::IO, jwb::JSONWorkbook)
-    summary(io, jwb)
-    @printf(io, "%6s %-15s\n", "index", "name")
-    println(io, "-"^(6+1+15+1))
-
-    index = sort(jwb.sheetindex.lookup; byvalue = true)
-    for el in index
-        name = string(el[1])
-        @printf(io, "%6s %-15s\n", el[2], string(el[1]))
-    end
-end
 function Base.summary(io::IO, jws::JSONWorksheet)
     @printf("%d×%d %s - %s!%s\n", size(jws)..., "JSONWorksheet", 
         basename(xlsxpath(jws)), sheetnames(jws))

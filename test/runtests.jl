@@ -263,3 +263,47 @@ end
     @test  data[2]["Array_2"] == [4,5,6]
     @test  data[3]["Array_2"] == [7,8,9]
 end
+
+
+@testset "getindex jws" begin
+    data = ["/a" "/b" "/c::Vector";
+            1     "a"  "A;100;B"
+            2     "b"  "C;200;D"]
+
+    jws = JSONWorksheet("foo.xlsx", data, "Sheet1", ";")
+
+    @test jws[1, 1] == 1
+    @test jws[2, 1] == 2
+    @test jws[1, 2] == "a"
+    @test jws[2, 2] == "b"
+    @test jws[1, 3] == ["A", "100", "B"]
+    @test jws[2, 3] == ["C", "200", "D"]
+
+    @test_broken jws[1:2, 1]
+    @test_broken jws[1, 1:2]
+
+
+    @test_throws BoundsError jws[3, 1]
+    @test_throws BoundsError jws[1, 4]
+
+
+end
+
+@testset "getindex jws[!, col]" begin
+
+    x = [1, 2, 3]
+    df = DataFrame(x=x, copycols=false)
+    @test df.x === x
+    @test df[!, :x] === x
+    @test df[!, 1] === x
+    @test df[:, [:x]].x !== x
+    @test df[:, :].x !== x
+    @test df[:, r"x"].x !== x
+    @test df[:, r""].x !== x
+    @test df[:, Not(1:0)].x !== x
+    @test df[!, [:x]].x === x
+    @test df[!, :].x === x
+    @test df[!, r"x"].x === x
+    @test df[!, r""].x === x
+    @test df[!, Not(1:0)].x === x
+end

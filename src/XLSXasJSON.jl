@@ -7,7 +7,8 @@ using DataStructures
 
 include("index.jl")
 include("pointer.jl")
-include("reader.jl")
+include("worksheet.jl")
+include("workbook.jl")
 include("writer.jl")
 
 export JSONWorkbook, JSONWorksheet,
