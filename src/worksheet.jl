@@ -139,47 +139,31 @@ Base.length(jws::JSONWorksheet) = length(data(jws))
 ## getindex() definitions
 ##
 ##############################################################################
-Base.getindex(jws::JSONWorksheet, i) = getindex(data(jws), i)
-Base.getindex(jws::JSONWorksheet, r::UnitRange) = getindex(data(jws), r)
+Base.getindex(jws::JSONWorksheet, i) = getindex(jws[:], i)
+Base.getindex(jws::JSONWorksheet, ::Colon) = jws.data[:]
 
+Base.firstindex(jws::JSONWorksheet) = 1
 Base.lastindex(jws::JSONWorksheet) = lastindex(data(jws))
 
-@inline function Base.getindex(jws::JSONWorksheet, row_ind::Integer,
-                               col_ind::Union{Signed, Unsigned})
-    pointers = keys(jws)
-    @boundscheck begin
-        if !checkindex(Bool, eachindex(pointers), col_ind)
-            throw(BoundsError(jws, pointers[col_ind]))
-        end
-        if !checkindex(Bool, 1:length(jws), row_ind)
-            throw(BoundsError(data(jws), row_ind))
-        end
-    end
+@inline function Base.getindex(jws::JSONWorksheet, row_ind::Integer, col_ind::Integer)
+    p = keys(jws)[col_ind]
 
-    @inbounds jws[row_ind, pointers[col_ind]]
+    jws(row_ind, p)
 end
 
-@inline function Base.getindex(jws::JSONWorksheet, row_ind::Integer, col_ind::JSONPointer)
-    @assert in(col_ind, keys(jws)) "$col_ind in not in $(summary(JSONWorksheet))"
-    @boundscheck begin
-        if !checkindex(Bool, 1:length(jws), row_ind)
-            throw(BoundsError(data(jws), row_ind))
-        end
-    end
-
-    @inbounds jws[row_ind][col_ind]
+function Base.getindex(jws::JSONWorksheet, row_ind::Integer, col_ind::JSONPointer)
+    row = jws[row_ind]
+    
+    return row[col_ind]
 end
 
-@inline function Base.getindex(jws::JSONWorksheet, row_inds::AbstractVector, col_ind::JSONPointer)
-    @assert in(col_ind, keys(jws)) "$col_ind in not in $(summary(JSONWorksheet))"
-    @boundscheck begin
-        if !checkindex(Bool, 1:length(jws), row_inds)
-            throw(BoundsError(data(jws), row_inds))
-        end
-    end
-    #TODO 
-    # @inbounds jws[row_inds][col_ind]
+@inline function Base.getindex(jws::JSONWorksheet, row_inds, col_ind::Integer)
+    rows = jws[row_inds]
+    p = keys(jws)[col_ind]
+
+    map(row -> row[p], rows)
 end
+
 
 
 """
