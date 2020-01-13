@@ -14,7 +14,7 @@
 
 ## 설치 방법
 ```julia
-pkg> add https://github.com/devsisters/XLSXasJSON.jl
+pkg> add XLSXasJSON
 ```
 
 ## 사용법

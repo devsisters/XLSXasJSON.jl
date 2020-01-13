@@ -13,7 +13,7 @@ Designated row or colum must be standardized [JSONPointer](https://tools.ietf.or
 ## Installation
 
 ```julia
-pkg> add https://github.com/devsisters/XLSXasJSON.jl
+pkg> add XLSXasJSON
 ```
 
 ## Usage
