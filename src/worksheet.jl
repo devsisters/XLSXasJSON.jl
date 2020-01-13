@@ -145,10 +145,28 @@ Base.getindex(jws::JSONWorksheet, ::Colon) = jws.data[:]
 Base.firstindex(jws::JSONWorksheet) = 1
 Base.lastindex(jws::JSONWorksheet) = lastindex(data(jws))
 
-@inline function Base.getindex(jws::JSONWorksheet, row_ind::Integer, col_ind::Integer)
+function Base.getindex(jws::JSONWorksheet, row_ind::Integer, col_ind::Integer)
     p = keys(jws)[col_ind]
 
-    jws(row_ind, p)
+    jws[row_ind, p]
+end
+function Base.getindex(jws::JSONWorksheet, row_ind::Integer, col_ind::AbstractArray)
+    pointers = keys(jws)[col_ind]
+    
+    permutedims(map(p -> jws[row_ind, p], pointers))
+end
+@inline function Base.getindex(jws::JSONWorksheet, row_inds::AbstractArray, col_ind::AbstractArray)
+    pointers = keys(jws)[col_ind]
+    rows = jws[row_inds]
+
+    # v = vcat(map(el -> jws[el, col_ind], row_inds)...)
+    v = Array{Any, 2}(undef, length(rows), length(pointers))
+    @inbounds for (r, _row) in enumerate(rows)
+        for (c, _col) in enumerate(pointers)
+            v[r, c] = _row[_col]
+        end
+    end
+    return v
 end
 
 function Base.getindex(jws::JSONWorksheet, row_ind::Integer, col_ind::JSONPointer)

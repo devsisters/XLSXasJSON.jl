@@ -280,9 +280,11 @@ end
     @test jws[2, 3] == ["C", "200", "D"]
 
     @test jws[1:2, 1] == [1, 2]
-    @test_broken jws[1, 1:2] == [1 "a"]
+    @test jws[1, 1:2] == [1 "a"]
 
-    # @test_throws BoundsError jws[3, 1]
+    @test jws[1:2, 1:2] == data[2:3, 1:2]
+
+    @test_throws BoundsError jws[3, 1]
     @test_throws BoundsError jws[1, 4]
 
 end
