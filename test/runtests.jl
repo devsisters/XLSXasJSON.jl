@@ -265,7 +265,7 @@ end
 end
 
 
-@testset "getindex jws" begin
+@testset "JSONWorksheet - getindex with index" begin
     data = ["/a" "/b" "/c::Vector";
             1     "a"  "A;100;B"
             2     "b"  "C;200;D"]
@@ -280,15 +280,33 @@ end
     @test jws[2, 3] == ["C", "200", "D"]
 
     @test jws[1:2, 1] == [1, 2]
+    @test jws[1:end, 1] == [1, 2]
+
     @test jws[1, 1:2] == [1 "a"]
+    @test jws[1, 1:3] == permutedims([1,  "a",  ["A", "100", "B"]])
+    @test jws[1, 1:end] == jws[1, 1:3]
+    @test jws[:] == jws.data
+    @test jws[:, :] == jws[1:2, 1:3] == jws[1:end, 1:end]
 
     @test jws[1:2, 1:2] == data[2:3, 1:2]
 
     @test_throws BoundsError jws[3, 1]
     @test_throws BoundsError jws[1, 4]
-
 end
 
-@testset "getindex jws[:, col]" begin
+@testset "JSONWorksheet - getindex with a pointer" begin
 
+    data = ["/a/b" "/a/c/1" "/a/d/f" "/a/c/2::Vector";
+                1     "a"      4       "A;100;B"
+                2     "b"     "k"      "C;200;D"]
+
+    jws = JSONWorksheet("foo.xlsx", data, "Sheet1", ";")
+    x = jws[1, XLSXasJSON.JSONPointer("/a")]
+    @test x["b"] == 1
+    @test x["c"] == ["a", ["A", "100", "B"]]
+    @test x["d"] == OrderedDict("f" => 4)
+
+    @test jws[1, XLSXasJSON.JSONPointer("/a/c")] == ["a", ["A", "100", "B"]]
 end
+
+# TODO getindex with pointers?
