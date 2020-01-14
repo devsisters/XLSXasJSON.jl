@@ -270,7 +270,7 @@ end
             1     "a"  "A;100;B"
             2     "b"  "C;200;D"]
 
-    jws = JSONWorksheet("foo.xlsx", data, "Sheet1", ";")
+    jws = JSONWorksheet("foo.xlsx", "Sheet1", data)
 
     @test jws[1, 1] == 1
     @test jws[2, 1] == 2
@@ -300,7 +300,7 @@ end
                 1     "a"      4       "A;100;B"
                 2     "b"     "k"      "C;200;D"]
 
-    jws = JSONWorksheet("foo.xlsx", data, "Sheet1", ";")
+    jws = JSONWorksheet("foo.xlsx", "Sheet1", data)
     x = jws[1, XLSXasJSON.JSONPointer("/a")]
     @test x["b"] == 1
     @test x["c"] == ["a", ["A", "100", "B"]]
@@ -310,3 +310,16 @@ end
 end
 
 # TODO getindex with pointers?
+@testset "JSONWorksheet - squeeze" begin
+
+    col1 = rand(100)
+    col2 = map(i -> join(rand(20), ";"), 1:100)
+
+    data = ["/a/b/1" "/a/c::Vector{Float64}"; col1 col2]
+
+    jws = JSONWorksheet("foo.xlsx", "Sheet1", data,; squeeze = true)
+    @test length(jws) == 1
+    @test jws[1]["a"]["b"][1] == data[2:end, 1]
+    @test length(jws[1]["a"]["c"]) == 100
+end
+

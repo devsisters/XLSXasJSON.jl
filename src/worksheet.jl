@@ -1,5 +1,20 @@
 """
     JSONWorksheet
+
+construct 'Array{OrderedDict, 1}' for each row from Worksheet
+
+# Constructors
+```julia
+JSONWorksheet("Example.xlsx", "Sheet1")
+JSONWorksheet("Example.xlsx", 1)
+
+```
+# Arguments
+- `row_oriented` : if 'true'(the default) it will look for colum names in '1:1', if `false` it will look for colum names in 'A:A' 
+- `start_line` : starting index of position of columnname.
+- `squeeze` : squeezes all rows of Worksheet to singe row.
+- `delim` : a String or Regrex that of deliminator for converting single cell to array.
+
 """
 mutable struct JSONWorksheet
     xlsxpath::String
@@ -7,36 +22,32 @@ mutable struct JSONWorksheet
     data::Array{T, 1} where T 
     sheetname::String
 end
-function JSONWorksheet(xlsxpath, arr::Array{T, 2}, sheet, delim) where T
+function JSONWorksheet(xlsxpath, sheet, arr; 
+                        delim = ";", squeeze = false)
     arr = dropemptyrange(arr)
     @assert !isempty(arr) "'$(xlsxpath)!$(sheet)' don't have valid column names, try change optional argument'start_line'"
 
-    p = map(el -> begin 
+    pointer = map(el -> begin 
                     startswith(el, TOKEN_PREFIX) ? 
                         JSONPointer(el) : JSONPointer(TOKEN_PREFIX * el) 
                 end, arr[1, :])
-    real_keys = map(el -> el.token, p)
+    real_keys = map(el -> el.token, pointer)
+    # TODO more robust key validity check
     if !allunique(real_keys) 
         throw(AssertionError("column names must be unique, check for duplication $(arr[1, :])"))
     end
 
-    template = create_by_pointer(OrderedDict, p)
-    data = Array{typeof(template), 1}(undef, size(arr, 1)-1)
-    for i in 1:length(data)
-        v = deepcopy(template)
-        data[i] = v
-        row = arr[i+1, :]
-        @inbounds for (col, p) in enumerate(p)
-            v[p] = collect_cell(p, row[col], delim)
-        end
+    if squeeze
+        data = squeeze_jsonarray(arr, pointer, delim)
+    else 
+        data = eachrow_to_jsonarray(arr, pointer, delim)
     end
-
-    JSONWorksheet(normpath(xlsxpath), p, data, string(sheet))
+    JSONWorksheet(normpath(xlsxpath), pointer, data, string(sheet))
 end
 function JSONWorksheet(xf::XLSX.XLSXFile, sheet;
                        start_line = 1, 
                        row_oriented = true, 
-                       delim = ";")
+                       delim = ";", squeeze = false)
     ws = isa(sheet, Symbol) ? xf[string(sheet)] : xf[sheet]
     sheet = ws.name
     # orientation handling
@@ -51,7 +62,7 @@ function JSONWorksheet(xf::XLSX.XLSXFile, sheet;
             end
         end
 
-    JSONWorksheet(xf.filepath, ws, sheet, delim)
+    JSONWorksheet(xf.filepath, sheet, ws; delim = delim, squeeze = squeeze)
 end
 function JSONWorksheet(xlsxpath, sheet; kwargs...)
     xf = XLSX.readxlsx(xlsxpath)
@@ -59,6 +70,35 @@ function JSONWorksheet(xlsxpath, sheet; kwargs...)
     close(xf)
     return x
 end
+
+function eachrow_to_jsonarray(data::Array{T, 2}, pointers, delim) where T
+    template = create_by_pointer(OrderedDict, pointers)
+    
+    json = Array{typeof(template), 1}(undef, size(data, 1)-1)
+    @inbounds for i in 1:length(json)
+        x = deepcopy(template)
+        for (col, p) in enumerate(pointers)
+            x[p] = collect_cell(p, data[i+1, :][col], delim)
+        end
+        json[i] = x
+    end
+    return json
+end
+function squeeze_jsonarray(data::Array{T, 2}, pointers, delim) where T
+    arr_pointer = map(p -> begin 
+                U = Vector{eltype(p)}; JSONPointer{U}(p.token)
+        end, pointers)
+
+    squzzed_json = create_by_pointer(OrderedDict, arr_pointer)
+
+    @inbounds for (col, p) in enumerate(pointers)
+        val = map(i -> collect_cell(p, data[i+1, :][col], delim), 1:size(data, 1)-1)
+        squzzed_json[arr_pointer[col]] = val
+    end
+    return [squzzed_json]
+end
+
+
 @inline function dropemptyrange(arr::Array{T, 2}) where T
     cols = falses(size(arr, 2))
     @inbounds for c in 1:size(arr, 2)
@@ -186,7 +226,6 @@ end
 
     map(row -> row[p], rows)
 end
-
 
 
 """
