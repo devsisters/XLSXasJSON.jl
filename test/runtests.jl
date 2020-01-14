@@ -264,6 +264,18 @@ end
     @test  data[3]["Array_2"] == [7,8,9]
 end
 
+@testset "JSONWorksheet - squeeze" begin
+
+    col1 = rand(100)
+    col2 = map(i -> join(rand(20), ";"), 1:100)
+
+    data = ["/a/b/1" "/a/c::Vector{Float64}"; col1 col2]
+
+    jws = JSONWorksheet("foo.xlsx", "Sheet1", data,; squeeze = true)
+    @test length(jws) == 1
+    @test jws[1]["a"]["b"][1] == data[2:end, 1]
+    @test length(jws[1]["a"]["c"]) == 100
+end
 
 @testset "JSONWorksheet - getindex with index" begin
     data = ["/a" "/b" "/c::Vector";
@@ -310,16 +322,3 @@ end
 end
 
 # TODO getindex with pointers?
-@testset "JSONWorksheet - squeeze" begin
-
-    col1 = rand(100)
-    col2 = map(i -> join(rand(20), ";"), 1:100)
-
-    data = ["/a/b/1" "/a/c::Vector{Float64}"; col1 col2]
-
-    jws = JSONWorksheet("foo.xlsx", "Sheet1", data,; squeeze = true)
-    @test length(jws) == 1
-    @test jws[1]["a"]["b"][1] == data[2:end, 1]
-    @test length(jws[1]["a"]["c"]) == 100
-end
-
