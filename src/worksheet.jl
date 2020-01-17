@@ -12,7 +12,7 @@ JSONWorksheet("Example.xlsx", 1)
 # Arguments
 - `row_oriented` : if 'true'(the default) it will look for colum names in '1:1', if `false` it will look for colum names in 'A:A' 
 - `start_line` : starting index of position of columnname.
-- `squeeze` : squeezes all rows of Worksheet to singe row.
+- `squeeze` : squeezes all rows of Worksheet to a singe row.
 - `delim` : a String or Regrex that of deliminator for converting single cell to array.
 
 """
@@ -38,7 +38,7 @@ function JSONWorksheet(xlsxpath, sheet, arr;
     end
 
     if squeeze
-        data = squeeze_jsonarray(arr, pointer, delim)
+        data = squeezerow_to_jsonarray(arr, pointer, delim)
     else 
         data = eachrow_to_jsonarray(arr, pointer, delim)
     end
@@ -84,7 +84,7 @@ function eachrow_to_jsonarray(data::Array{T, 2}, pointers, delim) where T
     end
     return json
 end
-function squeeze_jsonarray(data::Array{T, 2}, pointers, delim) where T
+function squeezerow_to_jsonarray(data::Array{T, 2}, pointers, delim) where T
     arr_pointer = map(p -> begin 
                 U = Vector{eltype(p)}; JSONPointer{U}(p.token)
         end, pointers)
@@ -219,14 +219,14 @@ function Base.getindex(jws::JSONWorksheet, row_ind::Integer, col_ind::JSONPointe
     
     return row[col_ind]
 end
-
+@inline function Base.getindex(jws::JSONWorksheet, row_inds, p::JSONPointer)
+    map(row -> row[p], jws[row_inds])
+end
 @inline function Base.getindex(jws::JSONWorksheet, row_inds, col_ind::Integer)
-    rows = jws[row_inds]
     p = keys(jws)[col_ind]
 
-    map(row -> row[p], rows)
+    getindex(jws, row_inds, p)
 end
-
 
 """
     merge(a::JSONWorksheet, b::JSONWorksheet, bykey::AbstractString)

@@ -319,6 +319,8 @@ end
     @test x["d"] == OrderedDict("f" => 4)
 
     @test jws[1, XLSXasJSON.JSONPointer("/a/c")] == ["a", ["A", "100", "B"]]
+
+    @test jws[:, XLSXasJSON.JSONPointer("/a/b")] == [1, 2]
 end
 
 # TODO getindex with pointers?
