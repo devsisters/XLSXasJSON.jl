@@ -1,6 +1,6 @@
 module XLSXasJSON
 
-using Printf
+using Printf, REPL
 using JSON
 using XLSX
 using DataStructures

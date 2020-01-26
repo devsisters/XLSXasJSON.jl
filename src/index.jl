@@ -107,29 +107,11 @@ end
 """
 function fuzzymatch(l::Dict{AbstractString, Int}, idx::AbstractString)
         idxs = uppercase(idx)
-        dist = [(levenshtein(uppercase(x), idxs), x) for x in keys(l)]
+        dist = [(REPL.levenshtein(uppercase(x), idxs), x) for x in keys(l)]
         sort!(dist)
         c = [count(x -> x[1] <= i, dist) for i in 0:2]
         maxd = max(0, searchsortedlast(c, 8) - 1)
         [s for (d, s) in dist if d <= maxd]
-end
-# Levenshtein Distance https://github.com/JuliaLang/julia/blob/5e56243c3ba0dcacf947958520c9f808ce4e9f1d/stdlib/REPL/src/docview.jl#L439
-function levenshtein(s1, s2)
-    a, b = collect(s1), collect(s2)
-    m = length(a)
-    n = length(b)
-    d = Matrix{Int}(undef, m+1, n+1)
-
-    d[1:m+1, 1] = 0:m
-    d[1, 1:n+1] = 0:n
-
-    for i = 1:m, j = 1:n
-        d[i+1,j+1] = min(d[i  , j+1] + 1,
-                         d[i+1, j  ] + 1,
-                         d[i  , j  ] + (a[i] != b[j]))
-    end
-
-    return d[m+1, n+1]
 end
 
 @inline function lookupname(l::Dict{AbstractString, Int}, idx::AbstractString)
