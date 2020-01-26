@@ -3,17 +3,11 @@
 [[Base64]]
 uuid = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
 
-[[BinaryProvider]]
-deps = ["Libdl", "SHA"]
-git-tree-sha1 = "5b08ed6036d9d3f0ee6369410b830f8873d4024c"
-uuid = "b99e7846-7c00-51b0-8f62-c81ae34c0232"
-version = "0.5.8"
-
 [[DataStructures]]
 deps = ["InteractiveUtils", "OrderedCollections"]
-git-tree-sha1 = "a1b652fb77ae8ca7ea328fa7ba5aa151036e5c10"
+git-tree-sha1 = "b7720de347734f4716d1815b00ce5664ed6bbfd4"
 uuid = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
-version = "0.17.6"
+version = "0.17.9"
 
 [[Dates]]
 deps = ["Printf"]
@@ -24,10 +18,10 @@ deps = ["Random", "Serialization", "Sockets"]
 uuid = "8ba89e20-285c-5b6f-9357-94700520ee1b"
 
 [[EzXML]]
-deps = ["BinaryProvider", "Libdl", "Printf"]
-git-tree-sha1 = "469de9cb996a9c03f31905619ff3c33e905711f3"
+deps = ["Printf", "XML2_jll"]
+git-tree-sha1 = "0fa3b52a04a4e210aeb1626def9c90df3ae65268"
 uuid = "8f5d6c58-4d21-5cfd-889c-e3ad7ee6a615"
-version = "0.9.5"
+version = "1.1.0"
 
 [[InteractiveUtils]]
 deps = ["Markdown"]
@@ -39,8 +33,17 @@ git-tree-sha1 = "b34d7cef7b337321e97d22242c3c2b91f476748e"
 uuid = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
 version = "0.21.0"
 
+[[LibGit2]]
+uuid = "76f85450-5226-5b5a-8eaa-529ad045b433"
+
 [[Libdl]]
 uuid = "8f399da3-3557-5675-b5ff-fb832c97cbdb"
+
+[[Libiconv_jll]]
+deps = ["Libdl", "Pkg"]
+git-tree-sha1 = "48563fe30f00c9d4a4d61891e71df389bf901142"
+uuid = "94ce4f54-9a6c-5748-9c1c-f9c7231a4531"
+version = "1.16.0+0"
 
 [[Logging]]
 uuid = "56ddb016-857b-54e1-b83d-db4d58db5568"
@@ -64,9 +67,17 @@ git-tree-sha1 = "0139ba59ce9bc680e2925aec5b7db79065d60556"
 uuid = "69de0a69-1ddd-5017-9359-2bf0b02dc9f0"
 version = "0.3.10"
 
+[[Pkg]]
+deps = ["Dates", "LibGit2", "Libdl", "Logging", "Markdown", "Printf", "REPL", "Random", "SHA", "UUIDs"]
+uuid = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
+
 [[Printf]]
 deps = ["Unicode"]
 uuid = "de0858da-6303-5e67-8744-51eddeeeb8d7"
+
+[[REPL]]
+deps = ["InteractiveUtils", "Markdown", "Sockets"]
+uuid = "3fa0cd96-eef1-5676-8a61-b3b8758bbffb"
 
 [[Random]]
 deps = ["Serialization"]
@@ -85,6 +96,10 @@ uuid = "6462fe0b-24de-5631-8697-dd941f90decc"
 deps = ["Distributed", "InteractiveUtils", "Logging", "Random"]
 uuid = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
+[[UUIDs]]
+deps = ["Random", "SHA"]
+uuid = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
+
 [[Unicode]]
 uuid = "4ec0a83e-493e-50e2-b9ac-8f72acf5a8f5"
 
@@ -94,8 +109,20 @@ git-tree-sha1 = "dcf4dfd0fd01dee9b8cbf70e9fd869a17f34032c"
 uuid = "fdbf4ff8-1666-58a4-91e7-1b58723a45e0"
 version = "0.5.8"
 
+[[XML2_jll]]
+deps = ["Libdl", "Libiconv_jll", "Pkg", "Zlib_jll"]
+git-tree-sha1 = "ed5603a695aefe3e9e404fc7b052e02cc72cfab6"
+uuid = "02c8fc9c-b97f-50b9-bbe4-9be30ff0a78a"
+version = "2.9.9+1"
+
 [[ZipFile]]
-deps = ["BinaryProvider", "Libdl", "Printf"]
-git-tree-sha1 = "580ce62b6c14244916cc28ad54f8a2e2886f843d"
+deps = ["Libdl", "Printf", "Zlib_jll"]
+git-tree-sha1 = "8748302cfdec02c4ae9c97b112cf10003f7f767f"
 uuid = "a5390f91-8eb1-5f08-bee0-b1d1ffed6cea"
-version = "0.8.3"
+version = "0.9.1"
+
+[[Zlib_jll]]
+deps = ["Libdl", "Pkg"]
+git-tree-sha1 = "5618a43055eb09377edca21d19d0e99bce24a9c3"
+uuid = "83775a58-1f1d-513f-b197-d71354ab007a"
+version = "1.2.11+7"
