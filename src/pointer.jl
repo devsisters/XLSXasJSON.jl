@@ -84,8 +84,8 @@ function create_by_pointer(::Type{T}, arr::Array) where T <: AbstractDict
     template = T(arr[1])
     if length(arr) > 1
         @inbounds for p in arr
-            p = JSONPointer{Any}(p.token)
-            template[p] = missing
+            p2 = JSONPointer{Any}(p.token)
+            template[p2] = null_value(p)
         end
     end
     return template
