@@ -240,16 +240,25 @@ end
 
 @testset "XLSX Readng - type" begin
     xf = joinpath(data_path, "othercase.xlsx")
-    data = JSONWorksheet(xf, "promotion")
-    @test isa(data[1]["t1"]["A"], Integer)
-    @test isa(data[1]["t1"]["B"], Bool)
+    jws = JSONWorksheet(xf, "promotion")
+    @test isa(jws[1]["t1"]["A"], Integer)
+    @test isa(jws[1]["t1"]["B"], Bool)
 
-    @test isa(data[1]["t2"]["A"], Integer)
-    @test isa(data[1]["t2"]["B"], Float64)
+    @test isa(jws[1]["t2"]["A"], Integer)
+    @test isa(jws[1]["t2"]["B"], Float64)
 
-    @test isa(data[1]["t3"]["A"], Integer)
-    @test isa(data[1]["t3"]["B"], Bool)
-    @test isa(data[1]["t3"]["C"], Float64)
+    @test isa(jws[1]["t3"]["A"], Integer)
+    @test isa(jws[1]["t3"]["B"], Bool)
+    @test isa(jws[1]["t3"]["C"], Float64)
+
+    data = ["/a::Integer" "/b::Float64" "/c::Vector{Float64}";
+            1.     10   "1.5;2.2"
+            2.     20   "3;55"]
+    jws = JSONWorksheet("foo.xlsx", "Sheet1", data)
+
+    @test jws[:, XLSXasJSON.JSONPointer("/a")] == [1, 2]
+    @test jws[:, XLSXasJSON.JSONPointer("/b")] == [10, 20]
+    @test jws[:, XLSXasJSON.JSONPointer("/c")] == [[1.5,2.2], [3.0,55.0]]
 end
 
 @testset "XLSX Readng - delim" begin

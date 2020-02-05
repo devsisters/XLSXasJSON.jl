@@ -84,7 +84,8 @@ function create_by_pointer(::Type{T}, arr::Array) where T <: AbstractDict
     template = T(arr[1])
     if length(arr) > 1
         @inbounds for p in arr
-            template[p] = null_value(p)
+            p = JSONPointer{Any}(p.token)
+            template[p] = missing
         end
     end
     return template
@@ -105,7 +106,7 @@ end
 
 function setindex_by_pointer!(collection::T, v, p::JSONPointer{U}) where {T <: AbstractDict, U}
     v = ismissing(v) ? null_value(p) : v
-    if !isa(v, U)
+    if !isa(v, U) && 
         try 
             v = convert(eltype(p), v)
         catch e 
