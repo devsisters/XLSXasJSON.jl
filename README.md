@@ -1,6 +1,6 @@
 # XLSXasJSON [[KR](https://github.com/devsisters/XLSXasJSON.jl/blob/master/README_kr.md)]
-![](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat-square)
-![](https://github.com/devsisters/XLSXasJSON.jl/workflows/Run%20CI%20on%20master/badge.svg)
+![LICENSE MIT](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat-square)
+![Run CI on master](https://github.com/devsisters/XLSXasJSON.jl/workflows/Run%20CI%20on%20master/badge.svg)
 
 
 Inspired by [excel-as-json](https://github.com/stevetarver/excel-as-json)
