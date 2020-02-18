@@ -339,3 +339,22 @@ end
     @test haskey(jws, XLSXasJSON.JSONPointer("/aa")) == false
     @test haskey(jws, XLSXasJSON.JSONPointer("/a/c/3")) == false
 end
+
+@testset "JSONWorksheet - setindex!" begin
+    data = ["/a" "/b" "/c::Vector";
+            1     "a"  "A;100;B"
+            2     "b"  "C;200;D"]
+    jws = JSONWorksheet("foo.xlsx", "Sheet1", data)
+
+    @test_throws ArgumentError jws[XLSXasJSON.JSONPointer("/d")] = [1]
+
+    @test !haskey(jws, XLSXasJSON.JSONPointer("/d"))
+    jws[XLSXasJSON.JSONPointer("/d")] = [100, 200]
+    @test jws[:, XLSXasJSON.JSONPointer("/d")] == [100, 200]
+    @test haskey(jws, XLSXasJSON.JSONPointer("/d"))
+
+    jws[XLSXasJSON.JSONPointer("/a")] = ["a", "b"]
+    jws[:, XLSXasJSON.JSONPointer("/a")] == ["a", "b"]
+
+    @test_throws ErrorException jws[XLSXasJSON.JSONPointer("/c::Vector")] = [1, 2]
+end

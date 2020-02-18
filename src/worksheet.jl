@@ -241,6 +241,19 @@ end
     getindex(jws, row_inds, p)
 end
 
+function Base.setindex!(jws::JSONWorksheet, value::Vector, p::JSONPointer) 
+    if length(jws) != length(value)
+        throw(ArgumentError("New column must have the same length as old columns"))
+    end
+    @inbounds for (i, row) in enumerate(jws)
+        row[p] = value[i]
+    end
+    if !haskey(jws, p)
+        push!(jws.pointer, p)
+    end
+    return jws
+end
+
 """
     merge(a::JSONWorksheet, b::JSONWorksheet, bykey::AbstractString)
 
