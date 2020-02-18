@@ -261,11 +261,12 @@ Construct a merged JSONWorksheet from the given JSONWorksheets.
 If the same JSONPointer is present in another collection, the value for that key will be the      
 value it has in the last collection listed.
 """
-function Base.merge(a::JSONWorksheet, b::JSONWorksheet, bykey::AbstractString)
-    key = JSONPointer(bykey)
-    
-    @assert in(key, a.pointer) "JSONWorksheet-$(a.sheetname) do not has `$key`"
-    @assert in(key, b.pointer) "JSONWorksheet-$(b.sheetname) do not has `$key`"
+function Base.merge(a::JSONWorksheet, b::JSONWorksheet, key::AbstractString)
+    merge(a::JSONWorksheet, b::JSONWorksheet, JSONPointer(key))
+end
+function Base.merge(a::JSONWorksheet, b::JSONWorksheet, key::JSONPointer)    
+    @assert haskey(a, key) "$key is not found in the JSONWorksheet(\"$(a.sheetname)\")"
+    @assert haskey(b, key) "$key is not found in the JSONWorksheet(\"$(b.sheetname)\")"
     
     pointers = unique([a.pointer; b.pointer])
 
