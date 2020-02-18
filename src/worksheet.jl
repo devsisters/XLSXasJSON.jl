@@ -277,10 +277,13 @@ function Base.append!(a::JSONWorksheet, b::JSONWorksheet)
     append!(a.data, b.data)
 end
 
-function Base.sort!(jws::JSONWorksheet, bykey; kwargs...)
-    key = JSONPointer(bykey)
-    sorted_idx = sortperm(map(el -> el[key], data(jws)); kwargs...)
+function Base.sort!(jws::JSONWorksheet, key; kwargs...)
+    sort!(jws, JSONPointer(key); kwargs...)
+end
+function Base.sort!(jws::JSONWorksheet, pointer::JSONPointer; kwargs...)
+    sorted_idx = sortperm(map(el -> el[pointer], data(jws)); kwargs...)
     jws.data = data(jws)[sorted_idx]
+    return jws
 end
 
 function Base.summary(io::IO, jws::JSONWorksheet)
