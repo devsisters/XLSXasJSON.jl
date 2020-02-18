@@ -330,6 +330,12 @@ end
     @test jws[1, XLSXasJSON.JSONPointer("/a/c")] == ["a", ["A", "100", "B"]]
 
     @test jws[:, XLSXasJSON.JSONPointer("/a/b")] == [1, 2]
-end
 
-# TODO getindex with pointers?
+    @test haskey(jws, XLSXasJSON.JSONPointer("/a/b"))
+    @test haskey(jws, XLSXasJSON.JSONPointer("/a"))
+    @test haskey(jws, XLSXasJSON.JSONPointer("/a/c/2"))
+
+    @test haskey(jws, XLSXasJSON.JSONPointer("/a/1")) == false
+    @test haskey(jws, XLSXasJSON.JSONPointer("/aa")) == false
+    @test haskey(jws, XLSXasJSON.JSONPointer("/a/c/3")) == false
+end

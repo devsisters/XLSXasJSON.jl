@@ -163,6 +163,19 @@ data(jws::JSONWorksheet) = getfield(jws, :data)
 xlsxpath(jws::JSONWorksheet) = getfield(jws, :xlsxpath)
 sheetnames(jws::JSONWorksheet) = getfield(jws, :sheetname)
 Base.keys(jws::JSONWorksheet) = jws.pointer
+function Base.haskey(jws::JSONWorksheet, key::JSONPointer) 
+    t = key.token
+    for el in getfield.(keys(jws), :token)
+        if el == key.token
+            return true 
+        elseif length(el) > length(t) 
+            if el[1:length(t)] == t
+                return true 
+            end
+        end
+    end
+    return false
+end
 
 Base.iterate(jws::JSONWorksheet) = iterate(data(jws))
 Base.iterate(jws::JSONWorksheet, i) = iterate(data(jws), i)
