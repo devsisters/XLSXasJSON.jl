@@ -92,11 +92,11 @@ end
 
 # testdata
 @testset "Adobe Spry Examples" begin
-# source: https://opensource.adobe.com/Spry/samples/data_region/JSONDataSetSample.html
-    f = joinpath(data_path, "examples.xlsx")
+    # source: https://opensource.adobe.com/Spry/samples/data_region/JSONDataSetSample.html
+    f = joinpath(data_path, "example.xlsx")
 
     #example1
-    jws = JSONWorksheet(f, "example1")
+    jws = JSONWorksheet(f, "Sheet1")
     @test jws[1]["array_any"] == split("100;200;300;400", ";")
     @test jws[1]["array_int"] == [100,200,300,400]
     @test jws[1]["array_float"] == [0.1,0.2,0.3,0.4]
@@ -111,11 +111,11 @@ end
     @test jws[3]["array_float"] == [900.0]
 
     #example2
-    jws = JSONWorksheet(f, "example2")
+    jws = JSONWorksheet(f, "Sheet2")
     @test JSON.json(jws) == replace("""[{"color":"red","value":"#f00"},{"color":"green","value":"#0f0"},{"color":"blue","value":"#00f"},{"color":"cyan","value":"#0ff"},{"color":"magenta","value":"#f0f"},{"color":"yellow","value":"#ff0"},{"color":"black","value":"#000"}]""", "\n"=>"")
 
     #example5
-    jws = JSONWorksheet(f, "example5")
+    jws = JSONWorksheet(f, "Sheet3")
     @test isa(jws[1]["batters"]["batter"], Array)
     @test isa(jws[2]["batters"]["batter"], Array)
     @test isa(jws[3]["batters"]["batter"], Array)
@@ -132,7 +132,8 @@ end
     @test jws[3]["topping"][3] == OrderedDict("id"=>5003, "type"=>"Chocolate")
 
     #example6 - xf_coloriented
-    jws = JSONWorksheet(f, "example6"; row_oriented = false)
+    f = joinpath(data_path, "example_coloriented.xlsx")
+    jws = JSONWorksheet(f, "Sheet1"; row_oriented = false)
     @test jws[1]["id"] == 1
     @test jws[1]["type"] == "donut"
     @test jws[1]["name"] == "Cake"
