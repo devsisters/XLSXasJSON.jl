@@ -5,7 +5,6 @@ function dropnull(s)
     replace(s, r"(\"[\w]*\":null,)|(,?\"[\w]*\":null)" => "")
 end
 
-function write end
 function write(file::Union{String, IO}, jws::JSONWorksheet; indent = 2, drop_null = false)
     open(file, "w") do io
         data = JSON.json(jws, indent)
@@ -14,5 +13,12 @@ function write(file::Union{String, IO}, jws::JSONWorksheet; indent = 2, drop_nul
         end
 
         Base.write(io, data)
+    end
+end
+
+function write(path::String, jwb::JSONWorkbook; kwargs...)
+    f = splitext(basename(xlsxpath(jwb)))[1]
+    for s in sheetnames(jwb)
+        write(joinpath(path, "$(f)_$(s).json"), jwb[s]; kwargs...)
     end
 end
