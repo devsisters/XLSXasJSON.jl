@@ -11,10 +11,10 @@ julia> using Pkg
 julia> Pkg.add("XLSXasJSON")
 ```
 
-## Read Excel File
+## Read Excel, Write to JSON File
 
 You can read whole workbook, or specify sheet you want to read from Excel file.
-
+each rows on sheet are pared to `Array{OrderedDict, 1}` in Julia. 
 
 ### JSONWorkbook 
 
@@ -25,6 +25,7 @@ You can read whole workbook, or specify sheet you want to read from Excel file.
     xf = joinpath(p, "example.xlsx")
     jwb = JSONWorkbook(xf)
 ```
+You can access worksheet via `jwb[1]` or `jwb["sheetname"]`
 
 
 ### JSONWorksheet
@@ -35,6 +36,7 @@ You can read whole workbook, or specify sheet you want to read from Excel file.
     xf = joinpath(p, "example.xlsx")
     jws = JSONWorksheet(xf, :Sheet1)
 ```
+You can access rows of data with `jws[1, :]` 
 
 ## Writing JSON File
 ``` julia
