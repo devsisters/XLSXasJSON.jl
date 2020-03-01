@@ -24,9 +24,8 @@ You can read whole workbook, or specify sheet you want to read from Excel file.
     p = joinpath(dirname(pathof(XLSXasJSON)), "../test/data")
     xf = joinpath(p, "example.xlsx")
     jwb = JSONWorkbook(xf)
-
-    XLSXasJSON.write(@__DIR__, jwb)
 ```
+
 
 ### JSONWorksheet
 ``` julia
@@ -34,15 +33,22 @@ You can read whole workbook, or specify sheet you want to read from Excel file.
 
     p = joinpath(dirname(pathof(XLSXasJSON)), "../test/data")
     xf = joinpath(p, "example.xlsx")
-    jws = JSONWorksheet(xf, :example1)
-
-    # turns into json object
-    JSON.json(jws)
-    # saves with indent
-    XLSXasJSON.write("examples_example1.json", jws; indent = 2)
+    jws = JSONWorksheet(xf, :Sheet1)
 ```
 
 ## Writing JSON File
+``` julia
+    using XLSXasJSON
+
+    p = joinpath(dirname(pathof(XLSXasJSON)), "../test/data")
+    xf = joinpath(p, "example.xlsx")
+    jwb = JSONWorkbook(xf)
+
+    # Writing whole sheet
+    XLSXasJSON.write(pwd(), jwb)
+    # Writing singsheet
+    XLSXasJSON.write("Sheet1.json", jwb[1]; indent = 2)
+```
 
 
 
