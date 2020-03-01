@@ -1,19 +1,39 @@
-# XLSXasJSON [[KR](https://github.com/devsisters/XLSXasJSON.jl/blob/master/README_kr.md)]
-![](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat-square)
-![](https://github.com/devsisters/XLSXasJSON.jl/workflows/Run%20CI%20on%20master/badge.svg)
+
+# Getting Started
+
+## Installation
+
+From a Julia session, run:
+
+```julia
+julia> using Pkg
+
+julia> Pkg.add("XLSXasJSON")
+```
+
+## Read Excel File
+
+You can read whole workbook, or specify sheet you want to read from Excel file.
 
 
-## Introduction
-
-Designated row or colum must be standardized [JSONPointer](https://tools.ietf.org/html/rfc6901) token, ramaning rows will passed to json encoded file.
-
-## Usage
+### JSONWorkbook 
 
 ``` julia
-    using XLSXasJSON, JSON
+    using XLSXasJSON
 
     p = joinpath(dirname(pathof(XLSXasJSON)), "../test/data")
-    xf = joinpath(p, "examples.xlsx")
+    xf = joinpath(p, "example.xlsx")
+    jwb = JSONWorkbook(xf)
+
+    XLSXasJSON.write(@__DIR__, jwb)
+```
+
+### JSONWorksheet
+``` julia
+    using XLSXasJSON
+
+    p = joinpath(dirname(pathof(XLSXasJSON)), "../test/data")
+    xf = joinpath(p, "example.xlsx")
     jws = JSONWorksheet(xf, :example1)
 
     # turns into json object
@@ -21,6 +41,10 @@ Designated row or colum must be standardized [JSONPointer](https://tools.ietf.or
     # saves with indent
     XLSXasJSON.write("examples_example1.json", jws; indent = 2)
 ```
+
+## Writing JSON File
+
+
 
 ### Examples
 
