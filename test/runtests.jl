@@ -288,9 +288,9 @@ end
 end
 
 @testset "JSONWorksheet - getindex with index" begin
-    data = ["/a" "/b" "/c::Vector";
-            1     "a"  "A;100;B"
-            2     "b"  "C;200;D"]
+    data = ["/a" "/b" "/c::Vector" "/d/1/5/b";
+            1     "a"  "A;100;B"  "new"
+            2     "b"  "C;200;D"  "test"]
 
     jws = JSONWorksheet("foo.xlsx", "Sheet1", data)
 
@@ -306,14 +306,14 @@ end
 
     @test jws[1, 1:2] == [1 "a"]
     @test jws[1, 1:3] == permutedims([1,  "a",  ["A", "100", "B"]])
-    @test jws[1, 1:end] == jws[1, 1:3]
+    @test jws[1, 1:end] == jws[1, 1:4]
     @test jws[:] == jws.data
-    @test jws[:, :] == jws[1:2, 1:3] == jws[1:end, 1:end]
+    @test jws[:, :] == jws[1:2, 1:4] == jws[1:end, 1:end]
 
     @test jws[1:2, 1:2] == data[2:3, 1:2]
 
     @test_throws BoundsError jws[3, 1]
-    @test_throws BoundsError jws[1, 4]
+    @test_throws BoundsError jws[1, 5]
 end
 
 
