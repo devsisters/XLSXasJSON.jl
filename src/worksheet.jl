@@ -221,8 +221,12 @@ end
     v = Array{Any, 2}(undef, length(rows), length(pointers))
     @inbounds for (r, _row) in enumerate(rows)
         for (c, _col) in enumerate(pointers)
-            v[r, c] = _row[_col]
+            v[r, c] = if haskey(_row, _col)
+                        _row[_col]
+                    else 
+                        missing 
         end
+    end
     end
     return v
 end

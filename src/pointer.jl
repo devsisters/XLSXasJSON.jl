@@ -92,9 +92,37 @@ function create_by_pointer(::Type{T}, arr::Array) where T <: AbstractDict
 end
 
 for T in (Dict, OrderedDict)
+    @eval Base.haskey(dict::$T{K,V}, p::JSONPointer) where {K, V} = haskey_by_pointer(dict, p)
     @eval Base.getindex(dict::$T{K,V}, p::JSONPointer) where {K, V} = getindex_by_pointer(dict, p)
     @eval Base.setindex!(dict::$T{K,V}, v, p::JSONPointer) where {K <: AbstractString, V} = setindex_by_pointer!(dict, v, p)
     @eval Base.setindex!(dict::$T{K,V}, v, p::JSONPointer) where {K <: Integer, V} = setindex_by_pointer!(dict, v, p)
+end
+function haskey_by_pointer(collection, p::JSONPointer)::Bool
+    b = true
+    val = collection
+    @inbounds for (i, k) in enumerate(p.token)
+        val = begin 
+            if isa(val, Array)
+                if !isa(k, Integer)
+                    missing
+                else 
+                    length(val) >= k ? val[k] : missing 
+                end
+            else 
+                if isa(k, Integer)
+                    missing
+                else 
+                    haskey(val, k) ? val[k] : missing 
+                end
+            end
+        end
+
+        if ismissing(val)
+            b = false 
+            break 
+        end
+    end
+    return b
 end
 function getindex_by_pointer(collection, p::JSONPointer, i = 1)
     val = getindex(collection, p.token[i])
@@ -103,6 +131,7 @@ function getindex_by_pointer(collection, p::JSONPointer, i = 1)
     end
     return val
 end
+
 
 function setindex_by_pointer!(collection::T, v, p::JSONPointer{U}) where {T <: AbstractDict, U}
     v = ismissing(v) ? null_value(p) : v

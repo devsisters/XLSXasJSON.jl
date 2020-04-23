@@ -316,6 +316,27 @@ end
     @test_throws BoundsError jws[1, 4]
 end
 
+
+@testset "JSONWorksheet - haskey with a pointer" begin
+    data = ["/a/b" "/a/c/1" "/a/d/f" "/a/c/2::Vector";
+    1     "a"      4       "A;100;B"
+    2     "b"     "k"      "C;200;D"]
+
+    jws = JSONWorksheet("foo.xlsx", "Sheet1", data)
+
+    @test haskey(jws, XLSXasJSON.JSONPointer("/a"))
+    @test haskey(jws, XLSXasJSON.JSONPointer("/a/b"))
+    @test haskey(jws, XLSXasJSON.JSONPointer("/a/c/1"))
+    @test haskey(jws, XLSXasJSON.JSONPointer("/a/d"))
+    @test haskey(jws, XLSXasJSON.JSONPointer("/a/d/f"))
+    @test haskey(jws, XLSXasJSON.JSONPointer("/a/c/2"))
+
+    @test !haskey(jws, XLSXasJSON.JSONPointer("/x"))
+    @test !haskey(jws, XLSXasJSON.JSONPointer("/a/1"))
+    @test !haskey(jws, XLSXasJSON.JSONPointer("/a/c/5"))
+    @test !haskey(jws, XLSXasJSON.JSONPointer("/a/d/f/k"))
+
+end
 @testset "JSONWorksheet - getindex with a pointer" begin
 
     data = ["/a/b" "/a/c/1" "/a/d/f" "/a/c/2::Vector";
