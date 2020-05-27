@@ -94,7 +94,7 @@ function Base.show(io::IO, jwb::JSONWorkbook)
     @printf(io, "%6s %-15s\n", "index", "name")
     println(io, "-"^(6+1+15+1))
 
-    index = sort(jwb.sheetindex.lookup; byvalue = true)
+    index = sort(OrderedDict(jwb.sheetindex.lookup); byvalue = true)
     for el in index
         name = string(el[1])
         @printf(io, "%6s %-15s\n", el[2], string(el[1]))
