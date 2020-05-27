@@ -257,6 +257,9 @@ function Base.setindex!(jws::JSONWorksheet, value::Vector, p::JSONPointer)
     end
     return jws
 end
+function Base.setindex!(jws::JSONWorksheet, value, i::Integer, p::JSONPointer) 
+    jws[i][p] = value
+end
 
 """
     merge(a::JSONWorksheet, b::JSONWorksheet, bykey::AbstractString)
