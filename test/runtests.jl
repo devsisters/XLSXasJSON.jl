@@ -376,7 +376,13 @@ end
     @test haskey(jws, XLSXasJSON.JSONPointer("/d"))
 
     jws[XLSXasJSON.JSONPointer("/a")] = ["a", "b"]
-    jws[:, XLSXasJSON.JSONPointer("/a")] == ["a", "b"]
+    @test jws[:, XLSXasJSON.JSONPointer("/a")] == ["a", "b"]
+
+    jws[2, XLSXasJSON.JSONPointer("/a")] = ["change", "world"]
+    @test jws[2, XLSXasJSON.JSONPointer("/a")] == ["change", "world"]
+
+    jws[end, XLSXasJSON.JSONPointer("/b")] = "hooray"
+    @test jws[end, XLSXasJSON.JSONPointer("/b")] == "hooray"
 
     @test_throws ErrorException jws[XLSXasJSON.JSONPointer("/c::Vector")] = [1, 2]
 end
