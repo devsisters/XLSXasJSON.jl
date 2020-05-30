@@ -42,13 +42,13 @@ function JSONWorksheet(xlsxpath, sheet, arr;
     else 
         data = eachrow_to_jsonarray(arr, pointer, delim)
     end
-    JSONWorksheet(normpath(xlsxpath), pointer, data, string(sheet))
+    JSONWorksheet(normpath(xlsxpath), pointer, data, String(sheet))
 end
 function JSONWorksheet(xf::XLSX.XLSXFile, sheet;
                        start_line = 1, 
                        row_oriented = true, 
                        delim = ";", squeeze = false)
-    ws = isa(sheet, Symbol) ? xf[string(sheet)] : xf[sheet]
+    ws = isa(sheet, Symbol) ? xf[String(sheet)] : xf[sheet]
     sheet = ws.name
     # orientation handling
     ws = begin
@@ -220,14 +220,15 @@ end
     # v = vcat(map(el -> jws[el, col_ind], row_inds)...)
     v = Array{Any, 2}(undef, length(rows), length(pointers))
     @inbounds for (r, _row) in enumerate(rows)
-        for (c, _col) in enumerate(pointers)
-            v[r, c] = if haskey(_row, _col)
+                for (c, _col) in enumerate(pointers)
+                    v[r, c] = if haskey(_row, _col)
                         _row[_col]
                     else 
                         missing 
-        end
-    end
-    end
+                    end
+                end
+            end
+
     return v
 end
 
