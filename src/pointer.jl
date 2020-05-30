@@ -36,6 +36,8 @@ function JSONPointer(token::AbstractString)
 
     JSONPointer{T}(tuple(jk...)) 
 end
+JSONPointer(token::Symbol) = JSONPointer(String(token))
+
 
 """ 
     null_value(p::JSONPointer{T}) where T
