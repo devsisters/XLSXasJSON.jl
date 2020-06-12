@@ -8,7 +8,7 @@ Inspired by [excel-as-json](https://github.com/stevetarver/excel-as-json)
 ## Usage
 Parse Excel xlsx files into a Julia data structure to write them as a JSON encoded file. 
 
-Designated row or colum must be standardized [JSONPointer](https://tools.ietf.org/html/rfc6901) token, ramaning rows will passed to json encoded file.
+Designated row or colum must be standardized [JSONPointer](https://tools.ietf.org/html/rfc6901) token, remaining rows will passed to json encoded file.
 
 ## Installation
 
@@ -34,7 +34,7 @@ pkg> add XLSXasJSON
 ### Examples
 
 #### Any
-A simple, row oriented key
+A simple, row-oriented key:
 
 | /color|
 | -----|
@@ -49,13 +49,13 @@ produces
 ```
 
 #### Dict
-A dotted key name looks like
+A dotted key name looks like:
 
 | /color/name|color/value|
 | ----------|-----------|
 | red       |#f00       |
 
-and produces
+and produces:
 
 ```json
 [{
@@ -66,13 +66,13 @@ and produces
 }]
 ```
 
-It can has as many layers as you want
+It can have as many layers as you want:
 
 | /a/b/c/d/e/f|
 | ---------------|
 | It can be done|
 
-and produces
+and produces:
 
 ```json
 [{
@@ -91,7 +91,7 @@ and produces
 
 ```
 #### Array
-Sometimes it's convinient to put array values in seperate column in XLSX 
+Sometimes it's convienient to put array values in seperate column in XLSX.
 
 | /color/name|color/rgb/1|color/rgb/2|color/rgb/3|
 | ----|-----|-----|-----|
@@ -107,16 +107,16 @@ Sometimes it's convinient to put array values in seperate column in XLSX
 ```
 
 #### Type Declarations
-You can declare Type with `::` operator same way as Julia.
-- value of `Vector` will be splitted with deliminator ';'.
-- Only json supported types will be checked for validation
+You can declare Type with `::` operator the same way as in Julia.
+- The value of `Vector` will be splitted with deliminator ';'.
+- Only JSON supported types will be checked for validation.
 
 
 | /array::Vector    |/array_int::Vector{Int}|/array_float::Vector{Float64}|
 | ------------| ------------ | ------------|
 | 100;200;300 |100;200;300   |100;200;300  |
 
-and produces
+and produces:
 
 ```json
 [{
@@ -140,14 +140,14 @@ and produces
 
 #### All of the above
 
-Now you know all the rules necessary to create any json data structure you want with just a column name
-This is a more complete row oriented example
+Now you know all the rules necessary to create any json data structure you want with just a column name.
+This is a more complete row-oriented example:
 
 | /a/b | /a/b2::Vector{Int} | /a/b3/1,Type | /a/b3/1/Amount | /a/b3/2/Type | /a/b3/2/Amount | /a/b3/3/Type | /a/b3/3/Amount::Vector |
 |------------------|-------------|------|---|------------|---|-----------|-----------|
 | Fooood | 100;200;300 | Cake | 50 | Chocolate | 19 | Ingredient | Salt;100 |
 
-would produce
+would produce:
 ```json
 [
   {
@@ -180,4 +180,4 @@ would produce
 ]
 
 ```
-You can do same with column oriented sheets. with `row_oriented = false` keyword argument. 
+You can do the same with column-oriented sheets with the `row_oriented = false` keyword argument. 
