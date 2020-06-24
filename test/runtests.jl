@@ -1,94 +1,10 @@
 using Test
 using XLSXasJSON
+using JSONPointer
 using DataStructures
 using JSON
 
 data_path = joinpath(@__DIR__, "data")
-
-@testset "JSONPointer Basic" begin
-
-    a = XLSXasJSON.JSONPointer("/a/1/c")
-    b = XLSXasJSON.JSONPointer("/a/5")   
-    c = XLSXasJSON.JSONPointer("/a/2/d::Vector")
-    d = XLSXasJSON.JSONPointer("/a/2/e::Vector{Int}")
-    e = XLSXasJSON.JSONPointer("/a/2/f::Vector{Float64}")
-    
-    @test a.token == ("a", 1, "c")
-    @test b.token == ("a", 5)
-    @test c.token == ("a", 2, "d")
-    @test eltype(c) <: Array
-    @test eltype(d) <: Array{Int, 1}
-    @test eltype(e) <: Array{Float64, 1}
-
-    @test_throws ArgumentError XLSXasJSON.JSONPointer("1")
-    @test_throws ArgumentError XLSXasJSON.JSONPointer("a")
-
-    @test_throws MethodError XLSXasJSON.JSONPointer(0)
-
-    a1 = OrderedDict(a)
-    
-    @test a1["a"] isa AbstractArray
-    @test a1["a"][1] isa OrderedDict
-    @test a1["a"][1]["c"] |> ismissing
-
-    a1[b] = "b"
-    a1[c] = ["c", 1000]
-    a1[d] = [1, 2]
-    a1[e] = [1., 2.]
-
-    @test a1[b] == "b"
-    @test a1[c] == ["c", 1000]
-    @test a1[d] == [1, 2]
-    @test a1[e] == [1., 2.]
-end
-
-@testset "JSONPointer complex" begin
-    p = XLSXasJSON.JSONPointer("/3/a/1/b")
-    @test p.token == (3, "a", 1, "b")
-
-    d = Dict(p)
-    @test d[1] |> ismissing
-    @test d[3] isa Dict
-    @test d[3]["a"][1] isa Dict
-
-    p = XLSXasJSON.JSONPointer("/1/a/3::Vector{Int}")
-    @test p.token == (1, "a", 3)
-    d = OrderedDict(p)
-
-    @test d isa Array
-    @test d[1] isa OrderedDict
-    @test d[1]["a"] isa Array
-    @test d[1]["a"][1] |> ismissing
-    @test d[1]["a"][2] |> ismissing
-    @test d[1]["a"][3] isa Vector{Int}
-
-    a = XLSXasJSON.JSONPointer("/1/a")
-    b = XLSXasJSON.JSONPointer("/b/1")
-
-    # @test_throws XLSXasJSON.create_by_pointer(Dict, [a,b])
-
-end
-
-@testset "JSONPointer typecheck" begin
-    a = XLSXasJSON.JSONPointer("/int::Int")
-    b = XLSXasJSON.JSONPointer("/int_array::Vector{Int}")
-
-    a1 = Dict(a)
-    @test ismissing(XLSXasJSON.null_value(a))
-    @test ismissing(a1[a])
-    @test_throws ErrorException a1[a] = "a"
-
-    b1 = Dict(b)
-    @test b1[b] == XLSXasJSON.null_value(b) == Int[]
-    @test_throws ErrorException b1[b] = 1
-    @test_throws ErrorException b1[b] = [1, "a"]
-
-    # TODO User Defined type
-    struct Foo 
-    end
-    @test_broken c = XLSXasJSON.JSONPointer("/foo::Foo")
-
-end
 
 # testdata
 @testset "Adobe Spry Examples" begin
