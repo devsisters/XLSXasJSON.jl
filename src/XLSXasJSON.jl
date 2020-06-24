@@ -2,11 +2,13 @@ module XLSXasJSON
 
 using Printf, REPL
 using JSON
+using JSONPointer
 using XLSX
-using DataStructures
+using OrderedCollections
+
 
 include("index.jl")
-include("pointer.jl")
+# include("pointer.jl")
 include("worksheet.jl")
 include("workbook.jl")
 include("writer.jl")

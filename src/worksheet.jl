@@ -18,7 +18,7 @@ JSONWorksheet("Example.xlsx", 1)
 """
 mutable struct JSONWorksheet
     xlsxpath::String
-    pointer::Array{JSONPointer, 1}
+    pointer::Array{JSONPointer.Pointer, 1}
     data::Array{T, 1} where T 
     sheetname::String
 end
@@ -28,8 +28,8 @@ function JSONWorksheet(xlsxpath, sheet, arr;
     @assert !isempty(arr) "'$(xlsxpath)!$(sheet)' don't have valid column names, try change optional argument'start_line'"
 
     pointer = map(el -> begin 
-                    startswith(el, TOKEN_PREFIX) ? 
-                        JSONPointer(el) : JSONPointer(TOKEN_PREFIX * el) 
+                    startswith(el, JSONPointer.TOKEN_PREFIX) ? 
+                        JSONPointer.Pointer(el) : JSONPointer.Pointer(JSONPointer.TOKEN_PREFIX * el) 
                 end, arr[1, :])
     real_keys = map(el -> el.token, pointer)
     # TODO more robust key validity check
@@ -72,11 +72,9 @@ function JSONWorksheet(xlsxpath, sheet; kwargs...)
 end
 
 function eachrow_to_jsonarray(data::Array{T, 2}, pointers, delim) where T
-    template = create_by_pointer(OrderedDict, pointers)
-    
-    json = Array{typeof(template), 1}(undef, size(data, 1)-1)
+    json = Array{OrderedDict, 1}(undef, size(data, 1)-1)
     @inbounds for i in 1:length(json)
-        x = deepcopy(template)
+        x = OrderedDict{String, Any}()
         for (col, p) in enumerate(pointers)
             x[p] = collect_cell(p, data[i+1, :][col], delim)
         end
@@ -84,20 +82,19 @@ function eachrow_to_jsonarray(data::Array{T, 2}, pointers, delim) where T
     end
     return json
 end
+
 function squeezerow_to_jsonarray(data::Array{T, 2}, pointers, delim) where T
     arr_pointer = map(p -> begin 
-                U = Vector{eltype(p)}; JSONPointer{U}(p.token)
+                U = Vector{eltype(p)}; JSONPointer.Pointer{U}(p.token)
         end, pointers)
 
-    squzzed_json = create_by_pointer(OrderedDict, arr_pointer)
-
+    squzzed_json = OrderedDict()
     @inbounds for (col, p) in enumerate(pointers)
         val = map(i -> collect_cell(p, data[i+1, :][col], delim), 1:size(data, 1)-1)
         squzzed_json[arr_pointer[col]] = val
     end
     return [squzzed_json]
 end
-
 
 @inline function dropemptyrange(arr::Array{T, 2}) where T
     cols = falses(size(arr, 2))
@@ -126,9 +123,9 @@ end
     return arr[rows, :]
 end
 
-function collect_cell(p::JSONPointer{T}, cell, delim) where T
+function collect_cell(p::JSONPointer.Pointer{T}, cell, delim) where T
     if ismissing(cell) 
-        val = null_value(p)
+        val = JSONPointer.null_value(p)
     else
         if T <: AbstractArray
             if isa(cell, AbstractString)
@@ -163,7 +160,7 @@ data(jws::JSONWorksheet) = getfield(jws, :data)
 xlsxpath(jws::JSONWorksheet) = getfield(jws, :xlsxpath)
 sheetnames(jws::JSONWorksheet) = getfield(jws, :sheetname)
 Base.keys(jws::JSONWorksheet) = jws.pointer
-function Base.haskey(jws::JSONWorksheet, key::JSONPointer) 
+function Base.haskey(jws::JSONWorksheet, key::JSONPointer.Pointer) 
     t = key.token
     for el in getfield.(keys(jws), :token)
         if el == key.token
@@ -232,12 +229,12 @@ end
     return v
 end
 
-function Base.getindex(jws::JSONWorksheet, row_ind::Integer, col_ind::JSONPointer)
+function Base.getindex(jws::JSONWorksheet, row_ind::Integer, col_ind::JSONPointer.Pointer)
     row = jws[row_ind]
     
     return row[col_ind]
 end
-@inline function Base.getindex(jws::JSONWorksheet, row_inds, p::JSONPointer)
+@inline function Base.getindex(jws::JSONWorksheet, row_inds, p::JSONPointer.Pointer)
     map(row -> row[p], jws[row_inds])
 end
 @inline function Base.getindex(jws::JSONWorksheet, row_inds, col_ind::Integer)
@@ -246,7 +243,7 @@ end
     getindex(jws, row_inds, p)
 end
 
-function Base.setindex!(jws::JSONWorksheet, value::Vector, p::JSONPointer) 
+function Base.setindex!(jws::JSONWorksheet, value::Vector, p::JSONPointer.Pointer) 
     if length(jws) != length(value)
         throw(ArgumentError("New column must have the same length as old columns"))
     end
@@ -258,7 +255,7 @@ function Base.setindex!(jws::JSONWorksheet, value::Vector, p::JSONPointer)
     end
     return jws
 end
-function Base.setindex!(jws::JSONWorksheet, value, i::Integer, p::JSONPointer) 
+function Base.setindex!(jws::JSONWorksheet, value, i::Integer, p::JSONPointer.Pointer) 
     jws[i][p] = value
 end
 
@@ -270,14 +267,14 @@ If the same JSONPointer is present in another collection, the value for that key
 value it has in the last collection listed.
 """
 function Base.merge(a::JSONWorksheet, b::JSONWorksheet, key::AbstractString)
-    merge(a::JSONWorksheet, b::JSONWorksheet, JSONPointer(key))
+    merge(a::JSONWorksheet, b::JSONWorksheet, JSONPointer.Pointer(key))
 end
-function Base.merge(a::JSONWorksheet, b::JSONWorksheet, key::JSONPointer)    
+function Base.merge(a::JSONWorksheet, b::JSONWorksheet, key::JSONPointer.Pointer)    
     @assert haskey(a, key) "$key is not found in the JSONWorksheet(\"$(a.sheetname)\")"
     @assert haskey(b, key) "$key is not found in the JSONWorksheet(\"$(b.sheetname)\")"
     
     pointers = unique([a.pointer; b.pointer])
-
+    
     keyvalues_a = map(el -> el[key], a.data)
     keyvalues_b = map(el -> el[key], b.data)
     ind = indexin(keyvalues_b, keyvalues_a)
@@ -288,7 +285,7 @@ function Base.merge(a::JSONWorksheet, b::JSONWorksheet, key::JSONPointer)
         if isnothing(j)
             _a = deepcopy(_b)
             for p in a.pointer 
-                _a[p] = null_value(p)
+                _a[p] = JSONPointer.null_value(p)
             end 
             push!(data, _a) 
         else 
@@ -313,9 +310,9 @@ function Base.append!(a::JSONWorksheet, b::JSONWorksheet)
 end
 
 function Base.sort!(jws::JSONWorksheet, key; kwargs...)
-    sort!(jws, JSONPointer(key); kwargs...)
+    sort!(jws, JSONPointer.Pointer(key); kwargs...)
 end
-function Base.sort!(jws::JSONWorksheet, pointer::JSONPointer; kwargs...)
+function Base.sort!(jws::JSONWorksheet, pointer::JSONPointer.Pointer; kwargs...)
     sorted_idx = sortperm(map(el -> el[pointer], data(jws)); kwargs...)
     jws.data = data(jws)[sorted_idx]
     return jws

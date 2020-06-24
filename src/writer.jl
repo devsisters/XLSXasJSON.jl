@@ -22,3 +22,19 @@ function write(path::String, jwb::JSONWorkbook; kwargs...)
         write(joinpath(path, "$(f)_$(s).json"), jwb[s]; kwargs...)
     end
 end
+
+function write_xlsx(file::String, jwb::JSONWorkbook)
+    XLSX.openxlsx(file, mode="w") do xf
+
+        for (i, s) in enumerate(sheetnames(jwb))
+            jws = jwb[s]
+            sheet = XLSX.addsheet!(xf, s)
+
+            labels = map(el -> "/" * join(el.token, "/"), jws.pointer)
+            columns = map(p -> get.(jws.data, Ref(p), missing), jws.pointer)
+
+            XLSX.writetable!(sheet, columns, labels, anchor_cell=XLSX.CellRef("A1"))
+
+        end
+    end
+end
