@@ -23,18 +23,29 @@ function write(path::String, jwb::JSONWorkbook; kwargs...)
     end
 end
 
-function write_xlsx(file::String, jwb::JSONWorkbook)
+function write_xlsx(file::String, jwb::JSONWorkbook; delim = ";", anchor_cell = "A1")
     XLSX.openxlsx(file, mode="w") do xf
 
         for (i, s) in enumerate(sheetnames(jwb))
             jws = jwb[s]
-            sheet = XLSX.addsheet!(xf, s)
+            if i == 1 
+                sheet = xf[1]
+                XLSX.rename!(sheet, s)
+            else
+                sheet = XLSX.addsheet!(xf, s)
+            end
 
             labels = map(el -> "/" * join(el.token, "/"), jws.pointer)
-            columns = map(p -> get.(jws.data, Ref(p), missing), jws.pointer)
-
-            XLSX.writetable!(sheet, columns, labels, anchor_cell=XLSX.CellRef("A1"))
-
+            columns = []
+            for p in jws.pointer
+                data = get.(jws.data, Ref(p), missing)
+                if eltype(data) <: Array
+                    data = join.(data, delim)
+                end 
+                push!(columns, data)
+            end
+            
+            XLSX.writetable!(sheet, columns, labels, anchor_cell=XLSX.CellRef(anchor_cell))
         end
     end
 end
