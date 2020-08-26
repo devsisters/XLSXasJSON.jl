@@ -3,7 +3,8 @@
 name: CoverageReport
 on:
   push:
-    branches: gh-pages
+    branches:
+      - gh-pages
 
 jobs:
   # This workflow contains a single job called "build"
