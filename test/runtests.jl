@@ -1,94 +1,10 @@
 using Test
 using XLSXasJSON
-using DataStructures
+using JSONPointer
+using OrderedCollections
 using JSON
 
 data_path = joinpath(@__DIR__, "data")
-
-@testset "JSONPointer Basic" begin
-
-    a = XLSXasJSON.JSONPointer("/a/1/c")
-    b = XLSXasJSON.JSONPointer("/a/5")   
-    c = XLSXasJSON.JSONPointer("/a/2/d::Vector")
-    d = XLSXasJSON.JSONPointer("/a/2/e::Vector{Int}")
-    e = XLSXasJSON.JSONPointer("/a/2/f::Vector{Float64}")
-    
-    @test a.token == ("a", 1, "c")
-    @test b.token == ("a", 5)
-    @test c.token == ("a", 2, "d")
-    @test eltype(c) <: Array
-    @test eltype(d) <: Array{Int, 1}
-    @test eltype(e) <: Array{Float64, 1}
-
-    @test_throws ArgumentError XLSXasJSON.JSONPointer("1")
-    @test_throws ArgumentError XLSXasJSON.JSONPointer("a")
-
-    @test_throws MethodError XLSXasJSON.JSONPointer(0)
-
-    a1 = OrderedDict(a)
-    
-    @test a1["a"] isa AbstractArray
-    @test a1["a"][1] isa OrderedDict
-    @test a1["a"][1]["c"] |> ismissing
-
-    a1[b] = "b"
-    a1[c] = ["c", 1000]
-    a1[d] = [1, 2]
-    a1[e] = [1., 2.]
-
-    @test a1[b] == "b"
-    @test a1[c] == ["c", 1000]
-    @test a1[d] == [1, 2]
-    @test a1[e] == [1., 2.]
-end
-
-@testset "JSONPointer complex" begin
-    p = XLSXasJSON.JSONPointer("/3/a/1/b")
-    @test p.token == (3, "a", 1, "b")
-
-    d = Dict(p)
-    @test d[1] |> ismissing
-    @test d[3] isa Dict
-    @test d[3]["a"][1] isa Dict
-
-    p = XLSXasJSON.JSONPointer("/1/a/3::Vector{Int}")
-    @test p.token == (1, "a", 3)
-    d = OrderedDict(p)
-
-    @test d isa Array
-    @test d[1] isa OrderedDict
-    @test d[1]["a"] isa Array
-    @test d[1]["a"][1] |> ismissing
-    @test d[1]["a"][2] |> ismissing
-    @test d[1]["a"][3] isa Vector{Int}
-
-    a = XLSXasJSON.JSONPointer("/1/a")
-    b = XLSXasJSON.JSONPointer("/b/1")
-
-    # @test_throws XLSXasJSON.create_by_pointer(Dict, [a,b])
-
-end
-
-@testset "JSONPointer typecheck" begin
-    a = XLSXasJSON.JSONPointer("/int::Int")
-    b = XLSXasJSON.JSONPointer("/int_array::Vector{Int}")
-
-    a1 = Dict(a)
-    @test ismissing(XLSXasJSON.null_value(a))
-    @test ismissing(a1[a])
-    @test_throws ErrorException a1[a] = "a"
-
-    b1 = Dict(b)
-    @test b1[b] == XLSXasJSON.null_value(b) == Int[]
-    @test_throws ErrorException b1[b] = 1
-    @test_throws ErrorException b1[b] = [1, "a"]
-
-    # TODO User Defined type
-    struct Foo 
-    end
-    @test_broken c = XLSXasJSON.JSONPointer("/foo::Foo")
-
-end
 
 # testdata
 @testset "Adobe Spry Examples" begin
@@ -257,9 +173,9 @@ end
             2.     20   "3;55"]
     jws = JSONWorksheet("foo.xlsx", "Sheet1", data)
 
-    @test jws[:, XLSXasJSON.JSONPointer("/a")] == [1, 2]
-    @test jws[:, XLSXasJSON.JSONPointer("/b")] == [10, 20]
-    @test jws[:, XLSXasJSON.JSONPointer("/c")] == [[1.5,2.2], [3.0,55.0]]
+    @test jws[:, j"/a"] == [1, 2]
+    @test jws[:, j"/b"] == [10, 20]
+    @test jws[:, j"/c"] == [[1.5,2.2], [3.0,55.0]]
 end
 
 @testset "XLSX Readng - delim" begin
@@ -307,8 +223,8 @@ end
     @test jws[1, 1:2] == [1 "a"]
     @test jws[1, 1:3] == permutedims([1,  "a",  ["A", "100", "B"]])
     @test jws[1, 1:end] == jws[1, 1:4]
-    @test jws[:] == jws.data
     @test jws[:, :] == jws[1:2, 1:4] == jws[1:end, 1:end]
+    @test size(jws[:]) == size(jws.data)
 
     @test jws[1:2, 1:2] == data[2:3, 1:2]
 
@@ -324,17 +240,17 @@ end
 
     jws = JSONWorksheet("foo.xlsx", "Sheet1", data)
 
-    @test haskey(jws, XLSXasJSON.JSONPointer("/a"))
-    @test haskey(jws, XLSXasJSON.JSONPointer("/a/b"))
-    @test haskey(jws, XLSXasJSON.JSONPointer("/a/c/1"))
-    @test haskey(jws, XLSXasJSON.JSONPointer("/a/d"))
-    @test haskey(jws, XLSXasJSON.JSONPointer("/a/d/f"))
-    @test haskey(jws, XLSXasJSON.JSONPointer("/a/c/2"))
+    @test haskey(jws, j"/a")
+    @test haskey(jws, j"/a/b")
+    @test haskey(jws, j"/a/c/1")
+    @test haskey(jws, j"/a/d")
+    @test haskey(jws, j"/a/d/f")
+    @test haskey(jws, j"/a/c/2")
 
-    @test !haskey(jws, XLSXasJSON.JSONPointer("/x"))
-    @test !haskey(jws, XLSXasJSON.JSONPointer("/a/1"))
-    @test !haskey(jws, XLSXasJSON.JSONPointer("/a/c/5"))
-    @test !haskey(jws, XLSXasJSON.JSONPointer("/a/d/f/k"))
+    @test !haskey(jws, j"/x")
+    @test !haskey(jws, j"/a/1")
+    @test !haskey(jws, j"/a/c/5")
+    @test !haskey(jws, j"/a/d/f/k")
 
 end
 @testset "JSONWorksheet - getindex with a pointer" begin
@@ -344,22 +260,22 @@ end
                 2     "b"     "k"      "C;200;D"]
 
     jws = JSONWorksheet("foo.xlsx", "Sheet1", data)
-    x = jws[1, XLSXasJSON.JSONPointer("/a")]
+    x = jws[1, j"/a"]
     @test x["b"] == 1
     @test x["c"] == ["a", ["A", "100", "B"]]
     @test x["d"] == OrderedDict("f" => 4)
 
-    @test jws[1, XLSXasJSON.JSONPointer("/a/c")] == ["a", ["A", "100", "B"]]
+    @test jws[1, j"/a/c"] == ["a", ["A", "100", "B"]]
 
-    @test jws[:, XLSXasJSON.JSONPointer("/a/b")] == [1, 2]
+    @test jws[:, j"/a/b"] == [1, 2]
 
-    @test haskey(jws, XLSXasJSON.JSONPointer("/a/b"))
-    @test haskey(jws, XLSXasJSON.JSONPointer("/a"))
-    @test haskey(jws, XLSXasJSON.JSONPointer("/a/c/2"))
+    @test haskey(jws, j"/a/b")
+    @test haskey(jws, j"/a")
+    @test haskey(jws, j"/a/c/2")
 
-    @test haskey(jws, XLSXasJSON.JSONPointer("/a/1")) == false
-    @test haskey(jws, XLSXasJSON.JSONPointer("/aa")) == false
-    @test haskey(jws, XLSXasJSON.JSONPointer("/a/c/3")) == false
+    @test haskey(jws, j"/a/1") == false
+    @test haskey(jws, j"/aa") == false
+    @test haskey(jws, j"/a/c/3") == false
 end
 
 @testset "JSONWorksheet - setindex!" begin
@@ -368,15 +284,15 @@ end
             2     "b"  "C;200;D"]
     jws = JSONWorksheet("foo.xlsx", "Sheet1", data)
 
-    @test_throws ArgumentError jws[XLSXasJSON.JSONPointer("/d")] = [1]
+    @test_throws ArgumentError jws[j"/d"] = [1]
 
-    @test !haskey(jws, XLSXasJSON.JSONPointer("/d"))
-    jws[XLSXasJSON.JSONPointer("/d")] = [100, 200]
-    @test jws[:, XLSXasJSON.JSONPointer("/d")] == [100, 200]
-    @test haskey(jws, XLSXasJSON.JSONPointer("/d"))
+    @test !haskey(jws, j"/d")
+    jws[j"/d"] = [100, 200]
+    @test jws[:, j"/d"] == [100, 200]
+    @test haskey(jws, j"/d")
 
-    jws[XLSXasJSON.JSONPointer("/a")] = ["a", "b"]
-    jws[:, XLSXasJSON.JSONPointer("/a")] == ["a", "b"]
+    jws[j"/a"] = ["a", "b"]
+    jws[:, j"/a"] == ["a", "b"]
 
-    @test_throws ErrorException jws[XLSXasJSON.JSONPointer("/c::Vector")] = [1, 2]
+    @test_throws ErrorException jws[j"/c::Vector"] = [1, 2]
 end

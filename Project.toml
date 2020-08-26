@@ -4,14 +4,14 @@ author = ["김용희 <yongheekim@devsisters.com>"]
 version = "0.2.4"
 
 [deps]
-DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
 JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
+JSONPointer = "cc3ff66e-924d-4e6b-b111-1d9960e4bba9"
+OrderedCollections = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 REPL = "3fa0cd96-eef1-5676-8a61-b3b8758bbffb"
 XLSX = "fdbf4ff8-1666-58a4-91e7-1b58723a45e0"
 
 [compat]
-DataStructures = "0.17.6"
 JSON = "0.21.0"
 XLSX = "0.5.8, 0.6"
 julia = "1.3"
