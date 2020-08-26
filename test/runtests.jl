@@ -222,8 +222,8 @@ end
     @test jws[1, 1:2] == [1 "a"]
     @test jws[1, 1:3] == permutedims([1,  "a",  ["A", "100", "B"]])
     @test jws[1, 1:end] == jws[1, 1:4]
-    @test jws[:] == jws.data
     @test jws[:, :] == jws[1:2, 1:4] == jws[1:end, 1:end]
+    @test size(jws[:]) == size(jws.data)
 
     @test jws[1:2, 1:2] == data[2:3, 1:2]
 

@@ -263,7 +263,7 @@ end
     merge(a::JSONWorksheet, b::JSONWorksheet, bykey::AbstractString)
 
 Construct a merged JSONWorksheet from the given JSONWorksheets.
-If the same JSONPointer is present in another collection, the value for that key will be the      
+If the same Pointer is present in another collection, the value for that key will be the      
 value it has in the last collection listed.
 """
 function Base.merge(a::JSONWorksheet, b::JSONWorksheet, key::AbstractString)
