@@ -5,10 +5,9 @@ makedocs(
  checkdocs = :all,
    authors = "YongHee Kim",
   sitename = "XLSXasJSON.jl",
-     pages = Any[
-              "Index" => "index.md",
-              "User Guide" => "userguide.md",
-             ]
+  pages = [ "Home" => "index.md",
+            "Tutorial" => "tutorial.md",
+            "API Reference" => "api.md" ]
 )
 
 deploydocs(
