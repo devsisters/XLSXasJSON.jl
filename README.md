@@ -3,7 +3,7 @@
 ![Run CI on master](https://github.com/devsisters/XLSXasJSON.jl/workflows/Run%20CI%20on%20master/badge.svg)
 
 
-**Documentation**: [![][docs-stable-img]][docs-stable-url] 
+**Documentation**: [Docs](https://devsisters.github.io/XLSXasJSON.jl/dev/)
 <!-- [![][docs-latest-img]][docs-latest-url] -->
 
 
