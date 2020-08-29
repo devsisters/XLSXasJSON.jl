@@ -29,7 +29,6 @@ jobs:
             targetdir: 'docs/coverage' # REQUIRED # The directory where the generated report should be saved.
             reporttypes: 'HtmlInline;Badges;TextSummary' # The output formats and scope (separated by semicolon) Values: Badges, Clover, Cobertura, CsvSummary, Html, HtmlChart, HtmlInline, HtmlInline_AzurePipelines, HtmlInline_AzurePipelines_Dark, HtmlSummary, JsonSummary, Latex, LatexSummary, lcov, MHtml, PngChart, SonarQube, TeamCitySummary, TextSummary, Xml, XmlSummary
             verbosity: 'Info' # The verbosity level of the log messages. Values: Verbose, Info, Warning, Error, Off
-            title: '' # Optional title.
             tag: '${{ github.run_number }}_${{ github.run_id }}' # Optional tag or build version.
       - uses: EndBug/add-and-commit@v4 
         with:
