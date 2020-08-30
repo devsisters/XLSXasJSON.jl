@@ -3,9 +3,10 @@ using Documenter, XLSXasJSON
 function copy_coverage()
   source = joinpath(@__DIR__, "src/coverage")
   target = joinpath(@__DIR__, "build/coverage")
-  @info "Copy coverage report from `src/coverge` to `build/coverage`" 
+  @info "Copy $source to $target" 
 
   cp(source, target; force = true)
+  nothing
 end
 
 makedocs(
