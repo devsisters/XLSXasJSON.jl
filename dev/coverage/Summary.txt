@@ -1,5 +1,5 @@
 ﻿Summary
-  Generated on: 08/30/2020 - 00:37:35
+  Generated on: 08/30/2020 - 00:43:46
   Parser: LCovParser
   Assemblies: 1
   Classes: 5
