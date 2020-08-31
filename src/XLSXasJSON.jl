@@ -14,6 +14,6 @@ include("writer.jl")
 
 export JSONWorkbook, JSONWorksheet,
         hassheet, sheetnames,
-        xlsxpath, dropnull
+        xlsxpath
 
 end # module
