@@ -195,6 +195,11 @@ Base.getindex(jws::JSONWorksheet, row_ind, col_ind::Colon) = getindex(jws, row_i
 
 Base.firstindex(jws::JSONWorksheet) = firstindex(jws.data)
 Base.lastindex(jws::JSONWorksheet) = lastindex(jws.data) 
+function Base.lastindex(jws::JSONWorksheet, i::Integer) 
+    i == 1 ? lastindex(jws.data) : 
+    i == 2 ? lastindex(jws.pointer) : 
+    throw(DimensionMismatch("JSONWorksheet only has two dimensions"))
+end
 
 function Base.getindex(jws::JSONWorksheet, row_ind::Integer, col_ind::Integer)
     p = keys(jws)[col_ind]
