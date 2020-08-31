@@ -74,6 +74,55 @@ end
     @test_throws ArgumentError jwb[:promotion]
 end
 
+@testset "JSONWorkbook - etc" begin
+    xf = joinpath(data_path, "othercase.xlsx")
+    jwb = JSONWorkbook(xf)
+
+    @test hassheet(jwb, "Missing")
+    @test hassheet(jwb, :Sheet1)
+    @test !hassheet(jwb, "Sheet2")
+    @test !hassheet(jwb, :Sheet3)
+    
+    @test XLSXasJSON.getsheet(jwb, :Sheet1) == jwb["Sheet1"]
+
+    @test jwb[5] == jwb["mergeB"]
+    @test jwb[end] == jwb["mergeC"]
+
+    @test jwb[3:5] == [jwb[3],jwb[4],jwb[5]]
+
+    names = sheetnames(jwb)
+    for (i, jws) in enumerate(jwb) 
+        @test sheetnames(jws) == names[i]
+    end
+
+end
+
+
+@testset "JSONWorkbook - writer" begin
+    f = joinpath(data_path, "example.xlsx")
+    jwb = JSONWorkbook(f)
+
+    XLSXasJSON.write(data_path, jwb)
+
+    prefix = split(basename(f), ".")[1]
+    for s in sheetnames(jwb)
+        @test isfile(joinpath(data_path, "$(prefix)_$(s).json"))
+    end
+    @test JSON.parse(JSON.json(jwb[1], 2)) == JSON.parse(JSON.json(jwb[1]))
+    @test JSON.parse(JSON.json(jwb[2], 2)) == JSON.parse(JSON.json(jwb[2]))
+
+    # wirte to XLSX
+    f2 = joinpath(data_path, "example2.xlsx")
+    XLSXasJSON.write_xlsx(f2, jwb)
+    jwb2 = JSONWorkbook(f2)
+
+    @test sheetnames(jwb) == sheetnames(jwb2)
+    # TODO: Reconstruct pointer string from JSONPointer.Pointer 
+    # Type info in not preserved
+    # for i in 1:length(jwb)
+    #     @test jwb[i].pointer == jwb2[i].pointer
+    # end
+end
 
 @testset "JSONWorksheet - merge" begin
     xf = joinpath(data_path, "othercase.xlsx")
@@ -129,66 +178,6 @@ end
     @test ws1[2] == ws2[1]
     @test ws1[3] == ws2[2]
 end 
-
-
-@testset "XLSX Readng - Asserts" begin
-    xf = joinpath(data_path, "assert.xlsx")
-    @test_throws AssertionError JSONWorksheet(xf, "dup")
-    @test_throws AssertionError JSONWorksheet(xf, "dup2")
-    @test_throws AssertionError JSONWorksheet(xf, "dup3")
-
-    @test_throws MethodError JSONWorksheet(xf, "dict_array")
-    @test_broken JSONWorksheet(xf, "array_dict")
-
-    @test_throws AssertionError JSONWorksheet(xf, "start_line")
-    @test JSONWorksheet(xf, "start_line";start_line=2) isa JSONWorksheet
-    @test_throws AssertionError JSONWorksheet(xf, "empty")
-end
-
-@testset "XLSX Readng - missingdata" begin
-    xf = joinpath(data_path, "othercase.xlsx")
-    jws = JSONWorksheet(xf, "Missing")
-
-    @test size(jws) == (5, 4)
-    @test ismissing(jws[4]["Data"]["A"])
-    @test all(broadcast(el -> ismissing(el["AllNull"]), jws))
-    @test collect(keys(jws[1])) == ["Key", "Data", "AllNull"]
-end
-
-@testset "XLSX Readng - type" begin
-    xf = joinpath(data_path, "othercase.xlsx")
-    jws = JSONWorksheet(xf, "promotion")
-    @test isa(jws[1]["t1"]["A"], Integer)
-    @test isa(jws[1]["t1"]["B"], Bool)
-
-    @test isa(jws[1]["t2"]["A"], Integer)
-    @test isa(jws[1]["t2"]["B"], Float64)
-
-    @test isa(jws[1]["t3"]["A"], Integer)
-    @test isa(jws[1]["t3"]["B"], Bool)
-    @test isa(jws[1]["t3"]["C"], Float64)
-
-    data = ["/a::Integer" "/b::Float64" "/c::Vector{Float64}";
-            1.     10   "1.5;2.2"
-            2.     20   "3;55"]
-    jws = JSONWorksheet("foo.xlsx", "Sheet1", data)
-
-    @test jws[:, j"/a"] == [1, 2]
-    @test jws[:, j"/b"] == [10, 20]
-    @test jws[:, j"/c"] == [[1.5,2.2], [3.0,55.0]]
-end
-
-@testset "XLSX Readng - delim" begin
-    xf = joinpath(data_path, "delim.xlsx")
-    data = JSONWorksheet(xf, "Sheet1"; delim = r";|,")
-
-    @test  data[1]["Array_1"] == ["a", "b", "c"]
-    @test  data[2]["Array_1"] == ["d", "e", "f"]
-    @test  data[3]["Array_1"] == ["g", "h", "i"]
-    @test  data[1]["Array_2"] == [1,2,3]
-    @test  data[2]["Array_2"] == [4,5,6]
-    @test  data[3]["Array_2"] == [7,8,9]
-end
 
 @testset "JSONWorksheet - squeeze" begin
     col1 = rand(100)
@@ -301,3 +290,81 @@ end
 
     @test_throws ErrorException jws[j"/c::Vector"] = [1, 2]
 end
+
+@testset "JSONWorksheet - etc" begin 
+    f = joinpath(data_path, "example.xlsx")
+
+    #example1
+    jws = JSONWorksheet(f, "Sheet1")
+
+    @test xlsxpath(jws) == f
+    @test firstindex(jws) == 1
+    @test first(jws) == jws[1]
+    @test last(jws) == jws[end]
+
+    jws = JSONWorksheet(f, "Sheet2")
+    sort!(jws, j"/color")
+    @test jws[1][j"/color"] == "black"
+
+end
+
+
+@testset "Asserts" begin
+    xf = joinpath(data_path, "assert.xlsx")
+    @test_throws AssertionError JSONWorksheet(xf, "dup")
+    @test_throws AssertionError JSONWorksheet(xf, "dup2")
+    @test_throws AssertionError JSONWorksheet(xf, "dup3")
+
+    @test_throws MethodError JSONWorksheet(xf, "dict_array")
+    @test_broken JSONWorksheet(xf, "array_dict")
+
+    @test_throws AssertionError JSONWorksheet(xf, "start_line")
+    @test JSONWorksheet(xf, "start_line";start_line=2) isa JSONWorksheet
+    @test_throws AssertionError JSONWorksheet(xf, "empty")
+end
+
+@testset "missingdata" begin
+    xf = joinpath(data_path, "othercase.xlsx")
+    jws = JSONWorksheet(xf, "Missing")
+
+    @test size(jws) == (5, 4)
+    @test ismissing(jws[4]["Data"]["A"])
+    @test all(broadcast(el -> ismissing(el["AllNull"]), jws))
+    @test collect(keys(jws[1])) == ["Key", "Data", "AllNull"]
+end
+
+@testset "Static Type" begin
+    xf = joinpath(data_path, "othercase.xlsx")
+    jws = JSONWorksheet(xf, "promotion")
+    @test isa(jws[1]["t1"]["A"], Integer)
+    @test isa(jws[1]["t1"]["B"], Bool)
+
+    @test isa(jws[1]["t2"]["A"], Integer)
+    @test isa(jws[1]["t2"]["B"], Float64)
+
+    @test isa(jws[1]["t3"]["A"], Integer)
+    @test isa(jws[1]["t3"]["B"], Bool)
+    @test isa(jws[1]["t3"]["C"], Float64)
+
+    data = ["/a::Integer" "/b::Float64" "/c::Vector{Float64}";
+            1.     10   "1.5;2.2"
+            2.     20   "3;55"]
+    jws = JSONWorksheet("foo.xlsx", "Sheet1", data)
+
+    @test jws[:, j"/a"] == [1, 2]
+    @test jws[:, j"/b"] == [10, 20]
+    @test jws[:, j"/c"] == [[1.5,2.2], [3.0,55.0]]
+end
+
+@testset "Deliminator for a Array in a cell" begin
+    xf = joinpath(data_path, "delim.xlsx")
+    data = JSONWorksheet(xf, "Sheet1"; delim = r";|,")
+
+    @test  data[1]["Array_1"] == ["a", "b", "c"]
+    @test  data[2]["Array_1"] == ["d", "e", "f"]
+    @test  data[3]["Array_1"] == ["g", "h", "i"]
+    @test  data[1]["Array_2"] == [1,2,3]
+    @test  data[2]["Array_2"] == [4,5,6]
+    @test  data[3]["Array_2"] == [7,8,9]
+end
+

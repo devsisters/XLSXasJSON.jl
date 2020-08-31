@@ -62,23 +62,24 @@ function JSONWorkbook(xlsxpath; kwargs...)
 end
 
 # JSONWorkbook fallback functions
-hassheet(jwb::JSONWorkbook, s::Symbol) = haskey(jwb.sheetindex, s)
+hassheet(jwb::JSONWorkbook, s::AbstractString) = haskey(jwb.sheetindex, s)
+hassheet(jwb::JSONWorkbook, s::Symbol) = haskey(jwb.sheetindex, string(s))
 sheetnames(jwb::JSONWorkbook) = names(jwb.sheetindex)
 xlsxpath(jwb::JSONWorkbook) = jwb.xlsxpath
 
 getsheet(jwb::JSONWorkbook, i) = jwb.sheets[i]
 getsheet(jwb::JSONWorkbook, s::AbstractString) = getsheet(jwb, jwb.sheetindex[s])
-getsheet(jwb::JSONWorkbook, s::Symbol) = getsheet(jwb, jwb.sheetindex[String(s)])
+getsheet(jwb::JSONWorkbook, s::Symbol) = getsheet(jwb, jwb.sheetindex[string(s)])
 Base.getindex(jwb::JSONWorkbook, i::UnitRange) = getsheet(jwb, i)
 Base.getindex(jwb::JSONWorkbook, i::Integer) = getsheet(jwb, i)
 Base.getindex(jwb::JSONWorkbook, s::AbstractString) = getsheet(jwb, s)
-Base.getindex(jwb::JSONWorkbook, s::Symbol) = getsheet(jwb, String(s))
+Base.getindex(jwb::JSONWorkbook, s::Symbol) = getsheet(jwb, string(s))
 
 Base.length(jwb::JSONWorkbook) = length(jwb.sheets)
 Base.lastindex(jwb::JSONWorkbook) = length(jwb.sheets)
 
 Base.setindex!(jwb::JSONWorkbook, jws::JSONWorksheet, i1::Int) = setindex!(jwb.sheets, jws, i1)
-Base.setindex!(jwb::JSONWorkbook, jws::JSONWorksheet, s::Symbol) = setindex!(jwb, jws, String(s))
+Base.setindex!(jwb::JSONWorkbook, jws::JSONWorksheet, s::Symbol) = setindex!(jwb, jws, string(s))
 Base.setindex!(jwb::JSONWorkbook, jws::JSONWorksheet, s::AbstractString) = setindex!(jwb.sheets, jws, jwb.sheetindex[s])
 
 function Base.deleteat!(jwb::JSONWorkbook, i::Integer)
@@ -96,7 +97,6 @@ end
 Base.iterate(jwb::JSONWorkbook) = iterate(jwb, 1)
 function Base.iterate(jwb::JSONWorkbook, st)
     st > length(jwb) && return nothing
-    # TODO deprecate df
     return (jwb[st], st + 1)
 end
 
