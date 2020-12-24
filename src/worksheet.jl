@@ -18,7 +18,7 @@ JSONWorksheet("Example.xlsx", 1)
 """
 mutable struct JSONWorksheet
     xlsxpath::String
-    pointer::Array{JSONPointer.Pointer, 1}
+    pointer::Array{Pointer, 1}
     data::Array{T, 1} where T 
     sheetname::String
 end
@@ -27,11 +27,8 @@ function JSONWorksheet(xlsxpath, sheet, arr;
     arr = dropemptyrange(arr)
     @assert !isempty(arr) "'$(xlsxpath)!$(sheet)' don't have valid column names, try change optional argument'start_line'"
 
-    pointer = map(el -> begin 
-                    startswith(el, JSONPointer.TOKEN_PREFIX) ? 
-                        JSONPointer.Pointer(el) : JSONPointer.Pointer(JSONPointer.TOKEN_PREFIX * el) 
-                end, arr[1, :])
-    real_keys = map(el -> el.token, pointer)
+    pointer = parse_column_to_pointer(arr[1, :])
+    real_keys = map(el -> el.tokens, pointer)
     # TODO more robust key validity check
     if !allunique(real_keys) 
         throw(AssertionError("column names must be unique, check for duplication $(arr[1, :])"))
@@ -85,7 +82,7 @@ end
 
 function squeezerow_to_jsonarray(data::Array{T, 2}, pointers, delim) where T
     arr_pointer = map(p -> begin 
-                U = Vector{eltype(p)}; JSONPointer.Pointer{U}(p.token)
+                U = Vector{eltype(p)}; Pointer{U}(p.tokens)
         end, pointers)
 
     squzzed_json = OrderedDict()
@@ -123,7 +120,7 @@ end
     return arr[rows, :]
 end
 
-function collect_cell(p::JSONPointer.Pointer{T}, cell, delim) where T
+function collect_cell(p::Pointer{T}, cell, delim) where T
     if ismissing(cell) 
         val = JSONPointer.null_value(p)
     else
@@ -160,10 +157,10 @@ data(jws::JSONWorksheet) = getfield(jws, :data)
 xlsxpath(jws::JSONWorksheet) = getfield(jws, :xlsxpath)
 sheetnames(jws::JSONWorksheet) = getfield(jws, :sheetname)
 Base.keys(jws::JSONWorksheet) = jws.pointer
-function Base.haskey(jws::JSONWorksheet, key::JSONPointer.Pointer) 
-    t = key.token
+function Base.haskey(jws::JSONWorksheet, key::Pointer) 
+    t = key.tokens
     for el in getfield.(keys(jws), :token)
-        if el == key.token
+        if el == key.tokens
             return true 
         elseif length(el) > length(t) 
             if el[1:length(t)] == t
@@ -230,12 +227,12 @@ end
     return v
 end
 
-function Base.getindex(jws::JSONWorksheet, row_ind::Integer, col_ind::JSONPointer.Pointer)
+function Base.getindex(jws::JSONWorksheet, row_ind::Integer, col_ind::Pointer)
     row = jws[row_ind]
     
     return row[col_ind]
 end
-@inline function Base.getindex(jws::JSONWorksheet, row_inds, p::JSONPointer.Pointer)
+@inline function Base.getindex(jws::JSONWorksheet, row_inds, p::Pointer)
     map(row -> row[p], jws[row_inds])
 end
 @inline function Base.getindex(jws::JSONWorksheet, row_inds, col_ind::Integer)
@@ -244,7 +241,7 @@ end
     getindex(jws, row_inds, p)
 end
 
-function Base.setindex!(jws::JSONWorksheet, value::Vector, p::JSONPointer.Pointer) 
+function Base.setindex!(jws::JSONWorksheet, value::Vector, p::Pointer) 
     if length(jws) != length(value)
         throw(ArgumentError("New column must have the same length as old columns"))
     end
@@ -256,7 +253,7 @@ function Base.setindex!(jws::JSONWorksheet, value::Vector, p::JSONPointer.Pointe
     end
     return jws
 end
-function Base.setindex!(jws::JSONWorksheet, value, i::Integer, p::JSONPointer.Pointer) 
+function Base.setindex!(jws::JSONWorksheet, value, i::Integer, p::Pointer) 
     jws[i][p] = value
 end
 
@@ -268,9 +265,9 @@ If the same Pointer is present in another collection, the value for that key wil
 value it has in the last collection listed.
 """
 function Base.merge(a::JSONWorksheet, b::JSONWorksheet, key::AbstractString)
-    merge(a::JSONWorksheet, b::JSONWorksheet, JSONPointer.Pointer(key))
+    merge(a::JSONWorksheet, b::JSONWorksheet, Pointer(key))
 end
-function Base.merge(a::JSONWorksheet, b::JSONWorksheet, key::JSONPointer.Pointer)    
+function Base.merge(a::JSONWorksheet, b::JSONWorksheet, key::Pointer)    
     @assert haskey(a, key) "$key is not found in the JSONWorksheet(\"$(a.sheetname)\")"
     @assert haskey(b, key) "$key is not found in the JSONWorksheet(\"$(b.sheetname)\")"
     
@@ -299,8 +296,8 @@ function Base.merge(a::JSONWorksheet, b::JSONWorksheet, key::JSONPointer.Pointer
     JSONWorksheet(a.xlsxpath, pointers, data, a.sheetname)
 end
 function Base.append!(a::JSONWorksheet, b::JSONWorksheet)
-    ak = map(el -> el.token, keys(a)) 
-    bk = map(el -> el.token, keys(b))
+    ak = map(el -> el.tokens, keys(a)) 
+    bk = map(el -> el.tokens, keys(b))
     
     if sort(ak) != sort(bk)
         throw(AssertionError("""Column names must be same for append!
@@ -311,9 +308,9 @@ function Base.append!(a::JSONWorksheet, b::JSONWorksheet)
 end
 
 function Base.sort!(jws::JSONWorksheet, key; kwargs...)
-    sort!(jws, JSONPointer.Pointer(key); kwargs...)
+    sort!(jws, Pointer(key); kwargs...)
 end
-function Base.sort!(jws::JSONWorksheet, pointer::JSONPointer.Pointer; kwargs...)
+function Base.sort!(jws::JSONWorksheet, pointer::Pointer; kwargs...)
     sorted_idx = sortperm(map(el -> el[pointer], data(jws)); kwargs...)
     jws.data = data(jws)[sorted_idx]
     return jws
