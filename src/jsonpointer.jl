@@ -1,21 +1,22 @@
 
-function parse_column_to_pointer(data::AbstractArray)
-    pointers = Array{Pointer,1}(undef, length(data))
-    for (i, el) in enumerate(data)
-        if !startswith(el, JSONPointer.TOKEN_PREFIX)
-            el = "/" * el
-        end
-        if endswith(el, "}")
-            x = split(el, "{")
-            p = Pointer(x[1])
-            T = jsontype_to_juliatype(x[2][1:end-1])
-            p = Pointer{Array{T, 1}}(p.tokens)
-        else 
-            p = Pointer(el)
-        end
-        pointers[i] = p
+"""
+_column_to_pointer{T}(p::Pointer)
+
+construct JSONPointer.Pointer with specified type 
+"""
+function _column_to_pointer(token_string::AbstractString)::Pointer
+    if !startswith(token_string, JSONPointer.TOKEN_PREFIX)
+        token_string = "/" * token_string
     end
-    return pointers
+    if endswith(token_string, "}")
+        x = split(token_string, "{")
+        p = Pointer(x[1])
+        T = jsontype_to_juliatype(x[2][1:end-1])
+
+        return Pointer{Array{T, 1}}(p.tokens)
+    else 
+        return Pointer(token_string)
+    end
 end
 
 function jsontype_to_juliatype(t)

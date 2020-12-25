@@ -27,7 +27,7 @@ function JSONWorksheet(xlsxpath, sheet, arr;
     arr = dropemptyrange(arr)
     @assert !isempty(arr) "'$(xlsxpath)!$(sheet)' don't have valid column names, try change optional argument'start_line'"
 
-    pointer = parse_column_to_pointer(arr[1, :])
+    pointer = _column_to_pointer.(arr[1, :])
     real_keys = map(el -> el.tokens, pointer)
     # TODO more robust key validity check
     if !allunique(real_keys) 
@@ -187,8 +187,8 @@ Base.length(jws::JSONWorksheet) = length(data(jws))
 ##
 ##############################################################################
 Base.getindex(jws::JSONWorksheet, i) = getindex(jws.data, i)
-Base.getindex(jws::JSONWorksheet, row_ind::Colon, col_ind::Colon) = getindex(jws, eachindex(jws.data), eachindex(jws.pointer))
-Base.getindex(jws::JSONWorksheet, row_ind, col_ind::Colon) = getindex(jws, row_ind, eachindex(jws.pointer))
+Base.getindex(jws::JSONWorksheet, ::Colon, ::Colon) = getindex(jws, eachindex(jws.data), eachindex(jws.pointer))
+Base.getindex(jws::JSONWorksheet, row_ind, ::Colon) = getindex(jws, row_ind, eachindex(jws.pointer))
 
 Base.firstindex(jws::JSONWorksheet) = firstindex(jws.data)
 Base.lastindex(jws::JSONWorksheet) = lastindex(jws.data) 

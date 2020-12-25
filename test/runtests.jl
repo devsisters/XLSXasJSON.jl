@@ -316,7 +316,7 @@ end
     @test_throws AssertionError JSONWorksheet(xf, "dup3")
 
     @test_throws ErrorException JSONWorksheet(xf, "dict_array")
-    @test_broken JSONWorksheet(xf, "array_dict")
+    @test_throws ErrorException JSONWorksheet(xf, "array_dict")
 
     @test_throws AssertionError JSONWorksheet(xf, "start_line")
     @test JSONWorksheet(xf, "start_line";start_line=2) isa JSONWorksheet
