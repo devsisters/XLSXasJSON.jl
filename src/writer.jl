@@ -31,7 +31,7 @@ function write_xlsx(file::String, jwb::JSONWorkbook; delim = ";", anchor_cell = 
                 sheet = XLSX.addsheet!(xf, s)
             end
 
-            labels = map(el -> "/" * join(el.token, "/"), jws.pointer)
+            labels = map(el -> "/" * join(el.tokens, "/"), jws.pointer)
             columns = []
             for p in jws.pointer
                 data = get.(jws.data, Ref(p), missing)

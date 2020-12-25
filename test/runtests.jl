@@ -183,7 +183,7 @@ end
     col1 = rand(100)
     col2 = map(i -> join(rand(20), ";"), 1:100)
 
-    data = ["/a/b/1" "/a/c::Vector{Float64}"; col1 col2]
+    data = ["/a/b/1" "/a/c::array{number}"; col1 col2]
 
     jws = JSONWorksheet("foo.xlsx", "Sheet1", data,; squeeze = true)
     @test length(jws) == 1
@@ -192,7 +192,7 @@ end
 end
 
 @testset "JSONWorksheet - getindex with index" begin
-    data = ["/a" "/b" "/c::Vector" "/d/1/5/b";
+    data = ["/a" "/b" "/c::array" "/d/1/5/b";
             1     "a"  "A;100;B"  "new"
             2     "b"  "C;200;D"  "test"]
 
@@ -222,7 +222,7 @@ end
 
 
 @testset "JSONWorksheet - haskey with a pointer" begin
-    data = ["/a/b" "/a/c/1" "/a/d/f" "/a/c/2::Vector";
+    data = ["/a/b" "/a/c/1" "/a/d/f" "/a/c/2::array";
     1     "a"      4       "A;100;B"
     2     "b"     "k"      "C;200;D"]
 
@@ -243,7 +243,7 @@ end
 
 @testset "JSONWorksheet - getindex with a pointer" begin
 
-    data = ["/a/b" "/a/c/1" "/a/d/f" "/a/c/2::Vector";
+    data = ["/a/b" "/a/c/1" "/a/d/f" "/a/c/2::array";
                 1     "a"      4       "A;100;B"
                 2     "b"     "k"      "C;200;D"]
 
@@ -267,7 +267,7 @@ end
 end
 
 @testset "JSONWorksheet - setindex!" begin
-    data = ["/a" "/b" "/c::Vector";
+    data = ["/a" "/b" "/c::array";
             1     "a"  "A;100;B"
             2     "b"  "C;200;D"]
     jws = JSONWorksheet("foo.xlsx", "Sheet1", data)
@@ -288,7 +288,7 @@ end
     jws[end, j"/b"] = "hooray"
     @test jws[end, j"/b"] == "hooray"
 
-    @test_throws ErrorException jws[j"/c::Vector"] = [1, 2]
+    @test_throws ErrorException jws[j"/c::array"] = [1, 2]
 end
 
 @testset "JSONWorksheet - etc" begin 
@@ -315,7 +315,7 @@ end
     @test_throws AssertionError JSONWorksheet(xf, "dup2")
     @test_throws AssertionError JSONWorksheet(xf, "dup3")
 
-    @test_throws MethodError JSONWorksheet(xf, "dict_array")
+    @test_throws ErrorException JSONWorksheet(xf, "dict_array")
     @test_broken JSONWorksheet(xf, "array_dict")
 
     @test_throws AssertionError JSONWorksheet(xf, "start_line")
@@ -346,7 +346,7 @@ end
     @test isa(jws[1]["t3"]["B"], Bool)
     @test isa(jws[1]["t3"]["C"], Float64)
 
-    data = ["/a::Integer" "/b::Float64" "/c::Vector{Float64}";
+    data = ["/a::number" "/b::number" "/c::array{number}";
             1.     10   "1.5;2.2"
             2.     20   "3;55"]
     jws = JSONWorksheet("foo.xlsx", "Sheet1", data)
@@ -357,14 +357,18 @@ end
 end
 
 @testset "Deliminator for a Array in a cell" begin
-    xf = joinpath(data_path, "delim.xlsx")
-    data = JSONWorksheet(xf, "Sheet1"; delim = r";|,")
+    data = ["/a::array{number}" "/b::array{integer}" "/c::array";
+            "1;2;3"     "4;5;6"   "abc;가나다"
+            "1,2,3"     "4,5,6"   "abc,가나다,"]
 
-    @test  data[1]["Array_1"] == ["a", "b", "c"]
-    @test  data[2]["Array_1"] == ["d", "e", "f"]
-    @test  data[3]["Array_1"] == ["g", "h", "i"]
-    @test  data[1]["Array_2"] == [1,2,3]
-    @test  data[2]["Array_2"] == [4,5,6]
-    @test  data[3]["Array_2"] == [7,8,9]
+    jws = JSONWorksheet("foo.xlsx", "Sheet1", data; delim = r";|,")
+
+    @test  jws[1]["a"] == [1.0, 2.0, 3.0]
+    @test  jws[2]["a"] == [1.0, 2.0, 3.0]
+    @test  jws[1]["b"] == [4, 5, 6]
+    @test  jws[2]["b"] == [4, 5, 6]
+    @test  jws[1]["c"] == ["abc", "가나다"]
+    @test  jws[2]["c"] == ["abc", "가나다"]
+    
 end
 

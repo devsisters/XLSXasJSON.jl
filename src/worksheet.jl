@@ -122,7 +122,7 @@ end
 
 function collect_cell(p::Pointer{T}, cell, delim) where T
     if ismissing(cell) 
-        val = JSONPointer.null_value(p)
+        val = JSONPointer._null_value(p)
     else
         if T <: AbstractArray
             if isa(cell, AbstractString)
@@ -159,7 +159,7 @@ sheetnames(jws::JSONWorksheet) = getfield(jws, :sheetname)
 Base.keys(jws::JSONWorksheet) = jws.pointer
 function Base.haskey(jws::JSONWorksheet, key::Pointer) 
     t = key.tokens
-    for el in getfield.(keys(jws), :token)
+    for el in getfield.(keys(jws), :tokens)
         if el == key.tokens
             return true 
         elseif length(el) > length(t) 
@@ -283,7 +283,7 @@ function Base.merge(a::JSONWorksheet, b::JSONWorksheet, key::Pointer)
         if isnothing(j)
             _a = deepcopy(_b)
             for p in a.pointer 
-                _a[p] = JSONPointer.null_value(p)
+                _a[p] = JSONPointer._null_value(p)
             end 
             push!(data, _a) 
         else 
