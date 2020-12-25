@@ -135,10 +135,10 @@ Sometimes it's convinient to put array values in seperate column in XLSX
 
 #### Type Declarations
 You can declare Type with `::` operator the same way as in Julia.
-- The value of `Vector` will be splitted with deliminator ';'.
-- Only JSON supported types will be checked for validation.
+- The value of `array` will be splitted with deliminator ';'.
+- Instead Julia type, only JSON types can be used  
 
-| /array::Vector    |/array_int::Vector{Int}|/array_float::Vector{Float64}|
+| /array::array    |/array_int::array{integer}|/array_float::array{number}|
 | ------------| ------------ | ------------|
 | 100;200;300 |100;200;300   |100;200;300  |
 
@@ -169,7 +169,7 @@ and produces
 Now you know all the rules necessary to create any json data structure you want with just a column name.
 This is a more complete row-oriented example:
 
-| /a/b | /a/b2::Vector{Int} | /a/b3/1,Type | /a/b3/1/Amount | /a/b3/2/Type | /a/b3/2/Amount | /a/b3/3/Type | /a/b3/3/Amount::Vector |
+| /a/b | /a/b2::array{integer} | /a/b3/1,Type | /a/b3/1/Amount | /a/b3/2/Type | /a/b3/2/Amount | /a/b3/3/Type | /a/b3/3/Amount::array |
 |------------------|-------------|------|---|------------|---|-----------|-----------|
 | Fooood | 100;200;300 | Cake | 50 | Chocolate | 19 | Ingredient | Salt;100 |
 
