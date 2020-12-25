@@ -18,12 +18,12 @@ JSONWorksheet("Example.xlsx", 1)
 """
 mutable struct JSONWorksheet
     xlsxpath::String
-    pointer::Array{Pointer, 1}
-    data::Array{T, 1} where T 
+    pointer::Array{Pointer,1}
+    data::Array{T,1} where T 
     sheetname::String
 end
 function JSONWorksheet(xlsxpath, sheet, arr; 
-                        delim = ";", squeeze = false)
+                        delim=";", squeeze=false)
     arr = dropemptyrange(arr)
     @assert !isempty(arr) "'$(xlsxpath)!$(sheet)' don't have valid column names, try change optional argument'start_line'"
 
@@ -42,24 +42,24 @@ function JSONWorksheet(xlsxpath, sheet, arr;
     JSONWorksheet(normpath(xlsxpath), pointer, data, String(sheet))
 end
 function JSONWorksheet(xf::XLSX.XLSXFile, sheet;
-                       start_line = 1, 
-                       row_oriented = true, 
-                       delim = ";", squeeze = false)
+                       start_line=1, 
+                       row_oriented=true, 
+                       delim=";", squeeze=false)
     ws = isa(sheet, Symbol) ? xf[String(sheet)] : xf[sheet]
     sheet = ws.name
     # orientation handling
     ws = begin
-            rg = XLSX.get_dimension(ws)
-            if row_oriented
-                rg = XLSX.CellRange(XLSX.CellRef(start_line, rg.start.column_number), rg.stop)
-                dt = ws[rg]
-            else
-                rg = XLSX.CellRange(XLSX.CellRef(rg.start.row_number, start_line), rg.stop)
-                dt = permutedims(ws[rg])
-            end
+        rg = XLSX.get_dimension(ws)
+        if row_oriented
+            rg = XLSX.CellRange(XLSX.CellRef(start_line, rg.start.column_number), rg.stop)
+            dt = ws[rg]
+        else
+            rg = XLSX.CellRange(XLSX.CellRef(rg.start.row_number, start_line), rg.stop)
+            dt = permutedims(ws[rg])
         end
+    end
 
-    JSONWorksheet(xf.filepath, sheet, ws; delim = delim, squeeze = squeeze)
+    JSONWorksheet(xf.filepath, sheet, ws; delim=delim, squeeze=squeeze)
 end
 function JSONWorksheet(xlsxpath, sheet; kwargs...)
     xf = XLSX.readxlsx(xlsxpath)
@@ -68,32 +68,36 @@ function JSONWorksheet(xlsxpath, sheet; kwargs...)
     return x
 end
 
-function eachrow_to_jsonarray(data::Array{T, 2}, pointers, delim) where T
-    json = Array{OrderedDict, 1}(undef, size(data, 1)-1)
-    @inbounds for i in 1:length(json)
-        x = OrderedDict{String, Any}()
-        for (col, p) in enumerate(pointers)
-            x[p] = collect_cell(p, data[i+1, :][col], delim)
-        end
-        json[i] = x
+function eachrow_to_jsonarray(data::Array{T,2}, pointers, delim) where T
+    json = Array{OrderedDict,1}(undef, size(data, 1) - 1)
+    Threads.@threads for i in 1:length(json)
+        json[i] = row_to_jsonarray(data[i + 1, :], pointers, delim)
     end
     return json
 end
 
-function squeezerow_to_jsonarray(data::Array{T, 2}, pointers, delim) where T
-    arr_pointer = map(p -> begin 
-                U = Vector{eltype(p)}; Pointer{U}(p.tokens)
-        end, pointers)
+function row_to_jsonarray(row, pointers, delim)
+    x = OrderedDict{String,Any}()
+    for (col, p) in enumerate(pointers)
+        x[p] = collect_cell(p, row[col], delim)
+    end
+    return x
+end
 
-    squzzed_json = OrderedDict()
+function squeezerow_to_jsonarray(data::Array{T,2}, pointers, delim) where T
+    arr_pointer = map(p -> begin 
+        U = Vector{eltype(p)}; Pointer{U}(p.tokens)
+    end, pointers)
+
+    squzzed_json = OrderedDict{String, Any}()
     @inbounds for (col, p) in enumerate(pointers)
-        val = map(i -> collect_cell(p, data[i+1, :][col], delim), 1:size(data, 1)-1)
+        val = map(i -> collect_cell(p, data[i + 1, :][col], delim), 1:size(data, 1) - 1)
         squzzed_json[arr_pointer[col]] = val
     end
     return [squzzed_json]
 end
 
-@inline function dropemptyrange(arr::Array{T, 2}) where T
+@inline function dropemptyrange(arr::Array{T,2}) where T
     cols = falses(size(arr, 2))
     @inbounds for c in 1:size(arr, 2)
         # There must be a column name, or it's a commet line
@@ -213,16 +217,16 @@ end
     rows = jws[row_inds]
 
     # v = vcat(map(el -> jws[el, col_ind], row_inds)...)
-    v = Array{Any, 2}(undef, length(rows), length(pointers))
+    v = Array{Any,2}(undef, length(rows), length(pointers))
     @inbounds for (r, _row) in enumerate(rows)
-                for (c, _col) in enumerate(pointers)
-                    v[r, c] = if haskey(_row, _col)
-                        _row[_col]
-                    else 
-                        missing 
-                    end
-                end
+        for (c, _col) in enumerate(pointers)
+            v[r, c] = if haskey(_row, _col)
+                _row[_col]
+            else 
+                missing 
             end
+        end
+    end
 
     return v
 end
@@ -322,7 +326,7 @@ function Base.summary(io::IO, jws::JSONWorksheet)
 end
 function Base.show(io::IO, jws::JSONWorksheet)
     summary(io, jws)
-    #TODO truncate based on screen size
+    # TODO truncate based on screen size
     x = data(jws)
     print(io, "row 1 => ")
     print(io, JSON.json(x[1], 1))
