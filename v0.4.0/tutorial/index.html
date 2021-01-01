@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Tutorial · XLSXasJSON.jl</title><link href="https://fonts.googleapis.com/css?family=Lato|Roboto+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.11.1/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit">XLSXasJSON.jl</span></div><form class="docs-search" action="../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../">Home</a></li><li class="is-active"><a class="tocitem" href>Tutorial</a><ul class="internal"><li><a class="tocitem" href="#Installation"><span>Installation</span></a></li><li><a class="tocitem" href="#Usage-Exmple"><span>Usage Exmple</span></a></li><li><a class="tocitem" href="#Arguments"><span>Arguments</span></a></li><li><a class="tocitem" href="#JSONPointer-Exmples"><span>JSONPointer Exmples</span></a></li></ul></li><li><a class="tocitem" href="../api/">API Reference</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Tutorial</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Tutorial</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/devsisters/XLSXasJSON.jl/blob/master/docs/src/tutorial.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Tutorial"><a class="docs-heading-anchor" href="#Tutorial">Tutorial</a><a id="Tutorial-1"></a><a class="docs-heading-anchor-permalink" href="#Tutorial" title="Permalink"></a></h1><h2 id="Installation"><a class="docs-heading-anchor" href="#Installation">Installation</a><a id="Installation-1"></a><a class="docs-heading-anchor-permalink" href="#Installation" title="Permalink"></a></h2><p>From a Julia session, run:</p><pre><code class="language-julia">julia&gt; using Pkg
+julia&gt; Pkg.add(&quot;XLSXasJSON&quot;)</code></pre><h2 id="Usage-Exmple"><a class="docs-heading-anchor" href="#Usage-Exmple">Usage Exmple</a><a id="Usage-Exmple-1"></a><a class="docs-heading-anchor-permalink" href="#Usage-Exmple" title="Permalink"></a></h2><p>If you are familiar with a <a href="https://tools.ietf.org/html/rfc6901">JSONPointer</a> you can get start right away with example datas in the test.</p><h3 id="JSONWorkbook"><a class="docs-heading-anchor" href="#JSONWorkbook">JSONWorkbook</a><a id="JSONWorkbook-1"></a><a class="docs-heading-anchor-permalink" href="#JSONWorkbook" title="Permalink"></a></h3><p>By default, first rows of each sheets are considered as JSONPointer for data structure. And each sheets are pared to <code>Array{OrderedDict, 1}</code> </p><pre><code class="language-julia">    using XLSXasJSON
+
+    p = joinpath(dirname(pathof(XLSXasJSON)), &quot;../test/data&quot;)
+    xf = joinpath(p, &quot;example.xlsx&quot;)
+    jwb = JSONWorkbook(xf)</code></pre><p>You can access worksheet via <code>jwb[1]</code> or <code>jwb[&quot;sheetname&quot;]</code></p><h3 id="JSONWorksheet"><a class="docs-heading-anchor" href="#JSONWorksheet">JSONWorksheet</a><a id="JSONWorksheet-1"></a><a class="docs-heading-anchor-permalink" href="#JSONWorksheet" title="Permalink"></a></h3><pre><code class="language-julia">    using XLSXasJSON
+
+    p = joinpath(dirname(pathof(XLSXasJSON)), &quot;../test/data&quot;)
+    xf = joinpath(p, &quot;example.xlsx&quot;)
+    jws = JSONWorksheet(xf, :Sheet1)</code></pre><p>You can access rows of data with <code>jws[1, :]</code> </p><h3 id="Writing-JSON-File"><a class="docs-heading-anchor" href="#Writing-JSON-File">Writing JSON File</a><a id="Writing-JSON-File-1"></a><a class="docs-heading-anchor-permalink" href="#Writing-JSON-File" title="Permalink"></a></h3><pre><code class="language-julia">    using XLSXasJSON
+
+    p = joinpath(dirname(pathof(XLSXasJSON)), &quot;../test/data&quot;)
+    xf = joinpath(p, &quot;example.xlsx&quot;)
+    jwb = JSONWorkbook(xf)
+
+    # Writing whole sheet
+    XLSXasJSON.write(pwd(), jwb)
+    # Writing singsheet
+    XLSXasJSON.write(&quot;Sheet1.json&quot;, jwb[1]; indent = 2)</code></pre><h2 id="Arguments"><a class="docs-heading-anchor" href="#Arguments">Arguments</a><a id="Arguments-1"></a><a class="docs-heading-anchor-permalink" href="#Arguments" title="Permalink"></a></h2><ul><li><code>row_oriented</code> : if &#39;true&#39;(the default) it will look for colum names in &#39;1:1&#39;, if <code>false</code> it will look for colum names in &#39;A:A&#39; </li><li><code>start_line</code> : starting index of position of columnname.</li><li><code>squeeze</code> : squeezes all rows of Worksheet to a singe row.</li><li><code>delim</code> : a String or Regrex that of deliminator for converting single cell to array.</li></ul><h2 id="JSONPointer-Exmples"><a class="docs-heading-anchor" href="#JSONPointer-Exmples">JSONPointer Exmples</a><a id="JSONPointer-Exmples-1"></a><a class="docs-heading-anchor-permalink" href="#JSONPointer-Exmples" title="Permalink"></a></h2><h4 id="Basic"><a class="docs-heading-anchor" href="#Basic">Basic</a><a id="Basic-1"></a><a class="docs-heading-anchor-permalink" href="#Basic" title="Permalink"></a></h4><p>A simple, row oriented key</p><table><tr><th style="text-align: right">/color</th></tr><tr><td style="text-align: right">red</td></tr></table><p>produces</p><pre><code class="language-json">[{
+  &quot;color&quot;: &quot;red&quot;
+}]</code></pre><h4 id="Dict"><a class="docs-heading-anchor" href="#Dict">Dict</a><a id="Dict-1"></a><a class="docs-heading-anchor-permalink" href="#Dict" title="Permalink"></a></h4><p>Nested names looks like:</p><table><tr><th style="text-align: right">/color/name</th><th style="text-align: right">color/value</th></tr><tr><td style="text-align: right">red</td><td style="text-align: right">#f00</td></tr></table><p>and produces</p><pre><code class="language-json">[{
+  &quot;color&quot;: {
+    &quot;name&quot;: &quot;red&quot;,
+    &quot;value&quot;: &quot;#f00&quot;
+    }
+}]</code></pre><p>It can has as many nests as you want</p><table><tr><th style="text-align: right">/a/b/c/d/e/f</th></tr><tr><td style="text-align: right">It can be done</td></tr></table><p>and produces</p><pre><code class="language-json">[{
+    &quot;a&quot;: {
+      &quot;b&quot;: {
+        &quot;c&quot;: {
+          &quot;d&quot;: {
+            &quot;e&quot;: {
+              &quot;f&quot;: &quot;It can be done&quot;
+            }
+          }
+        }
+      }
+    }
+  }]
+</code></pre><h4 id="Array"><a class="docs-heading-anchor" href="#Array">Array</a><a id="Array-1"></a><a class="docs-heading-anchor-permalink" href="#Array" title="Permalink"></a></h4><p>Sometimes it&#39;s convinient to put array values in seperate column in XLSX </p><table><tr><th style="text-align: right">/color/name</th><th style="text-align: right">color/rgb/1</th><th style="text-align: right">color/rgb/2</th><th style="text-align: right">color/rgb/3</th></tr><tr><td style="text-align: right">red</td><td style="text-align: right">255</td><td style="text-align: right">0</td><td style="text-align: right">0</td></tr></table><pre><code class="language-json">[{
+  &quot;color&quot;: {
+    &quot;name&quot;: &quot;red&quot;,
+    &quot;rgb&quot;: [255, 0, 0]
+    }
+}]</code></pre><h4 id="Type-Declarations"><a class="docs-heading-anchor" href="#Type-Declarations">Type Declarations</a><a id="Type-Declarations-1"></a><a class="docs-heading-anchor-permalink" href="#Type-Declarations" title="Permalink"></a></h4><p>You can declare Type with <code>::</code> operator the same way as in Julia.</p><ul><li>The value of <code>array</code> will be splitted with deliminator &#39;;&#39;.</li><li>Instead Julia type, only JSON types can be used  </li></ul><table><tr><th style="text-align: right">/array::array</th><th style="text-align: right">/array_int::array{integer}</th><th style="text-align: right">/array_float::array{number}</th></tr><tr><td style="text-align: right">100;200;300</td><td style="text-align: right">100;200;300</td><td style="text-align: right">100;200;300</td></tr></table><p>and produces</p><pre><code class="language-json">[{
+  &quot;array&quot;: [
+    &quot;100&quot;,
+    &quot;200&quot;,
+    &quot;300&quot;
+  ],
+  &quot;array_int&quot;: [
+    100,
+    200,
+    300
+  ],
+  &quot;array_float&quot;: [
+    100.0,
+    200.0,
+    300.0
+  ]
+}]</code></pre><h4 id="All-of-the-above"><a class="docs-heading-anchor" href="#All-of-the-above">All of the above</a><a id="All-of-the-above-1"></a><a class="docs-heading-anchor-permalink" href="#All-of-the-above" title="Permalink"></a></h4><p>Now you know all the rules necessary to create any json data structure you want with just a column name. This is a more complete row-oriented example:</p><table><tr><th style="text-align: right">/a/b</th><th style="text-align: right">/a/b2::array{integer}</th><th style="text-align: right">/a/b3/1,Type</th><th style="text-align: right">/a/b3/1/Amount</th><th style="text-align: right">/a/b3/2/Type</th><th style="text-align: right">/a/b3/2/Amount</th><th style="text-align: right">/a/b3/3/Type</th><th style="text-align: right">/a/b3/3/Amount::array</th></tr><tr><td style="text-align: right">Fooood</td><td style="text-align: right">100;200;300</td><td style="text-align: right">Cake</td><td style="text-align: right">50</td><td style="text-align: right">Chocolate</td><td style="text-align: right">19</td><td style="text-align: right">Ingredient</td><td style="text-align: right">Salt;100</td></tr></table><p>would produce</p><pre><code class="language-json">[
+  {
+    &quot;a&quot;: {
+      &quot;b&quot;: &quot;Fooood&quot;,
+      &quot;b2&quot;: [
+        100,
+        200,
+        300
+      ],
+      &quot;b3&quot;: [
+        {
+          &quot;Type&quot;: &quot;Cake&quot;,
+          &quot;Amount&quot;: 50
+        },
+        {
+          &quot;Type&quot;: &quot;Chocolate&quot;,
+          &quot;Amount&quot;: 19
+        },
+        {
+          &quot;Type&quot;: &quot;Ingredient&quot;,
+          &quot;Amount&quot;: [
+            &quot;Salt&quot;,
+            &quot;100&quot;
+          ]
+        }
+      ]
+    }
+  }
+]
+</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../">« Home</a><a class="docs-footer-nextpage" href="../api/">API Reference »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Friday 1 January 2021 21:05">Friday 1 January 2021</span>. Using Julia version 1.5.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
