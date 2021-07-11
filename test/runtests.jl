@@ -372,3 +372,27 @@ end
     
 end
 
+@testset "Tables Interface" begin
+    data = ["/a/b1" "/a/b2" "/a/b3" "/c::array";
+            1     "a"      4       "A;100;B"
+            2     "b"     "k"      "C;200;D"]
+
+    jws = JSONWorksheet("foo.xlsx", "Sheet1", data)
+    
+    @test Tables.istable(jws)
+    @test Tables.istable(typeof(jws))
+    
+    # test that it defines row access
+    @test Tables.rowaccess(typeof(jws))
+    @test Tables.rows(jws) === jws
+
+    # test that it defines column access
+    @test Tables.columnaccess(typeof(jws))
+    @test Tables.columns(jws) == jws[:, :]
+
+    @test Tables.getcolumn(jws, j"/a/b1") == [1,2]
+    @test Tables.getcolumn(jws, 1) == [1,2]
+    @test Tables.columnnames(jws) === jws.pointer
+
+    @test Tables.getcolumn(jwsrow, j"/c") == ["A", "100", "B"]
+end
