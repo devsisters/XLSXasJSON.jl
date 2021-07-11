@@ -1,5 +1,5 @@
 
-# Getting Started
+# Tutorial
 
 ## Installation
 
@@ -7,16 +7,14 @@ From a Julia session, run:
 
 ```julia
 julia> using Pkg
-
 julia> Pkg.add("XLSXasJSON")
 ```
 
-## Read Excel, Write to JSON File
-
-You can read whole workbook, or specify sheet you want to read from Excel file.
-each rows on sheet are pared to `Array{OrderedDict, 1}` in Julia. 
+## Usage Exmple
+If you are familiar with a [JSONPointer](https://tools.ietf.org/html/rfc6901) you can get start right away with example datas in the test.
 
 ### JSONWorkbook 
+By default, first rows of each sheets are considered as JSONPointer for data structure. And each sheets are pared to `Array{OrderedDict, 1}` 
 
 ``` julia
     using XLSXasJSON
@@ -38,7 +36,8 @@ You can access worksheet via `jwb[1]` or `jwb["sheetname"]`
 ```
 You can access rows of data with `jws[1, :]` 
 
-## Writing JSON File
+
+### Writing JSON File
 ``` julia
     using XLSXasJSON
 
@@ -51,12 +50,17 @@ You can access rows of data with `jws[1, :]`
     # Writing singsheet
     XLSXasJSON.write("Sheet1.json", jwb[1]; indent = 2)
 ```
+## Arguments
+
+- `row_oriented` : if 'true'(the default) it will look for colum names in '1:1', if `false` it will look for colum names in 'A:A' 
+- `start_line` : starting index of position of columnname.
+- `squeeze` : squeezes all rows of Worksheet to a singe row.
+- `delim` : a String or Regrex that of deliminator for converting single cell to array.
 
 
+## JSONPointer Exmples
 
-### Examples
-
-#### Any
+#### Basic
 A simple, row oriented key
 
 | /color|
@@ -72,7 +76,7 @@ produces
 ```
 
 #### Dict
-A dotted key name looks like
+Nested names looks like:
 
 | /color/name|color/value|
 | ----------|-----------|
@@ -89,7 +93,7 @@ and produces
 }]
 ```
 
-It can has as many layers as you want
+It can has as many nests as you want
 
 | /a/b/c/d/e/f|
 | ---------------|
@@ -130,12 +134,11 @@ Sometimes it's convinient to put array values in seperate column in XLSX
 ```
 
 #### Type Declarations
-You can declare Type with `::` operator same way as Julia.
-- value of `Vector` will be splitted with deliminator ';'.
-- Only json supported types will be checked for validation
+You can declare Type with `::` operator the same way as in Julia.
+- The value of `array` will be splitted with deliminator ';'.
+- Instead Julia type, only JSON types can be used  
 
-
-| /array::Vector    |/array_int::Vector{Int}|/array_float::Vector{Float64}|
+| /array::array    |/array_int::array{integer}|/array_float::array{number}|
 | ------------| ------------ | ------------|
 | 100;200;300 |100;200;300   |100;200;300  |
 
@@ -163,10 +166,10 @@ and produces
 
 #### All of the above
 
-Now you know all the rules necessary to create any json data structure you want with just a column name
-This is a more complete row oriented example
+Now you know all the rules necessary to create any json data structure you want with just a column name.
+This is a more complete row-oriented example:
 
-| /a/b | /a/b2::Vector{Int} | /a/b3/1,Type | /a/b3/1/Amount | /a/b3/2/Type | /a/b3/2/Amount | /a/b3/3/Type | /a/b3/3/Amount::Vector |
+| /a/b | /a/b2::array{integer} | /a/b3/1,Type | /a/b3/1/Amount | /a/b3/2/Type | /a/b3/2/Amount | /a/b3/3/Type | /a/b3/3/Amount::array |
 |------------------|-------------|------|---|------------|---|-----------|-----------|
 | Fooood | 100;200;300 | Cake | 50 | Chocolate | 19 | Ingredient | Salt;100 |
 
@@ -203,4 +206,3 @@ would produce
 ]
 
 ```
-You can do same with column oriented sheets. with `row_oriented = false` keyword argument. 

@@ -2,12 +2,13 @@ module XLSXasJSON
 
 using Printf, REPL
 using JSON
+using JSONPointer
+using JSONPointer: Pointer
 using XLSX
-using DataStructures
-using Tables
+using OrderedCollections
 
 include("index.jl")
-include("pointer.jl")
+include("jsonpointer.jl")
 include("worksheet.jl")
 include("tables.jl")
 include("workbook.jl")
@@ -15,6 +16,6 @@ include("writer.jl")
 
 export JSONWorkbook, JSONWorksheet, JSONWorksheet2,
         hassheet, sheetnames,
-        xlsxpath, dropnull
+        xlsxpath
 
 end # module
