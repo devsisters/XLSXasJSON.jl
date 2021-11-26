@@ -1,20 +1,20 @@
-# thanks to: https://github.com/stevetarver/excel-as-json
 module XLSXasJSON
 
-using Printf
+using Printf, REPL
 using JSON
+using JSONPointer
+using JSONPointer: Pointer
 using XLSX
-using DataStructures
-using DataFrames
-import DataFrames.AbstractDataFrame
+using OrderedCollections
 
-include("structs.jl")
-include("read.jl")
-include("write.jl")
+include("index.jl")
+include("jsonpointer.jl")
+include("worksheet.jl")
+include("workbook.jl")
+include("writer.jl")
 
 export JSONWorkbook, JSONWorksheet,
-       hassheet, sheetnames,
-       xlsxpath, jsonpath,
-       save_json
+        hassheet, sheetnames,
+        xlsxpath
 
-end
+end # module
