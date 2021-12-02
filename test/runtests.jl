@@ -2,7 +2,7 @@ using Test
 using XLSXasJSON
 using JSONPointer
 using OrderedCollections
-using JSON
+using JSON3
 
 data_path = joinpath(@__DIR__, "data")
 
@@ -28,7 +28,7 @@ data_path = joinpath(@__DIR__, "data")
 
     #example2
     jws = JSONWorksheet(f, "Sheet2")
-    @test JSON.json(jws) == replace("""[{"color":"red","value":"#f00"},{"color":"green","value":"#0f0"},{"color":"blue","value":"#00f"},{"color":"cyan","value":"#0ff"},{"color":"magenta","value":"#f0f"},{"color":"yellow","value":"#ff0"},{"color":"black","value":"#000"}]""", "\n"=>"")
+    @test JSON3.write(jws) == replace("""[{"color":"red","value":"#f00"},{"color":"green","value":"#0f0"},{"color":"blue","value":"#00f"},{"color":"cyan","value":"#0ff"},{"color":"magenta","value":"#f0f"},{"color":"yellow","value":"#ff0"},{"color":"black","value":"#000"}]""", "\n"=>"")
 
     #example5
     jws = JSONWorksheet(f, "Sheet3")
@@ -108,8 +108,6 @@ end
     for s in sheetnames(jwb)
         @test isfile(joinpath(data_path, "$(prefix)_$(s).json"))
     end
-    @test JSON.parse(JSON.json(jwb[1], 2)) == JSON.parse(JSON.json(jwb[1]))
-    @test JSON.parse(JSON.json(jwb[2], 2)) == JSON.parse(JSON.json(jwb[2]))
 
     # wirte to XLSX
     f2 = joinpath(data_path, "example2.xlsx")
@@ -117,11 +115,9 @@ end
     jwb2 = JSONWorkbook(f2)
 
     @test sheetnames(jwb) == sheetnames(jwb2)
-    # TODO: Reconstruct pointer string from JSONPointer.Pointer 
-    # Type info in not preserved
-    # for i in 1:length(jwb)
-    #     @test jwb[i].pointer == jwb2[i].pointer
-    # end
+    for s in sheetnames(jwb)
+        @test jwb[s].pointer == jwb2[s].pointer
+    end
 end
 
 @testset "JSONWorksheet - merge" begin

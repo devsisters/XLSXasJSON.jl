@@ -23,7 +23,7 @@ function write_xlsx(file::String, jwb::JSONWorkbook; delim = ";", anchor_cell = 
     XLSX.openxlsx(file, mode="w") do xf
 
         for (i, s) in enumerate(sheetnames(jwb))
-            jws = jwb[s]
+            jws = jwb[i]
             if i == 1 
                 sheet = xf[1]
                 XLSX.rename!(sheet, s)
@@ -31,7 +31,7 @@ function write_xlsx(file::String, jwb::JSONWorkbook; delim = ";", anchor_cell = 
                 sheet = XLSX.addsheet!(xf, s)
             end
 
-            labels = map(el -> "/" * join(el.tokens, "/"), jws.pointer)
+            colnames = pointer_to_colname.(jws.pointer)
             columns = []
             for p in jws.pointer
                 data = get.(jws.data, Ref(p), missing)
@@ -41,7 +41,7 @@ function write_xlsx(file::String, jwb::JSONWorkbook; delim = ";", anchor_cell = 
                 push!(columns, data)
             end
             
-            XLSX.writetable!(sheet, columns, labels, anchor_cell=XLSX.CellRef(anchor_cell))
+            XLSX.writetable!(sheet, columns, colnames, anchor_cell=XLSX.CellRef(anchor_cell))
         end
     end
 end

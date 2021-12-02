@@ -44,3 +44,44 @@ function jsontype_to_juliatype(t)
         )
     end
 end
+
+function pointer_to_colname(p::Pointer{T})::String where T
+    col = "/" * join(p.tokens, "/")
+    t = juliatype_to_jsontype(T)
+    if t == "array"
+        col *= "::$t"
+        t2 = juliatype_to_jsontype(eltype(T))
+        if !isempty(t2)
+            col *= "{$t2}"
+        end
+    elseif !isempty(t) 
+        col *= "::$t"
+    end
+    return col
+end
+
+function juliatype_to_jsontype(T)
+    if T <: OrderedDict
+        t = "object"
+    elseif T <: Array
+        t = "array"
+    elseif T == String
+        t = "string"
+    elseif T == Float64
+        t = "number"
+    elseif T == Int
+        t = "integer"
+    elseif T == Bool
+        t = "boolean"
+    elseif T == Missing
+        t = "null"
+    elseif T == Nothing
+        t = "null"
+    elseif T == Any 
+        t = ""
+    else
+        @warn("cannot find jsontype from $T, returning empty string")
+        t = ""
+    end
+    return t
+end
