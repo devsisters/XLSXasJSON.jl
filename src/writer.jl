@@ -1,14 +1,14 @@
-JSON.json(jws::JSONWorksheet) = JSON.json(data(jws))
-JSON.json(jws::JSONWorksheet, indent) = JSON.json(data(jws), indent)
-
-function write(file::Union{String, IO}, jws::JSONWorksheet; indent = 2, drop_null = false)
+function write(file::Union{String, IO}, jws::JSONWorksheet; pretty = true, drop_null = false)
     open(file, "w") do io
-        data = JSON.json(jws, indent)
+        if pretty
+            JSON3.pretty(io, data(jws))
+        else
+            JSON3.write(io, data(jws))
+        end
         # drop null array such as [null, null, ....] 
         if drop_null
-            data = replace(data, r"(\"[\w]*\":null,)|(,?\"[\w]*\":null)" => "")
+            replace!(io, r"(\"[\w]*\":null,)|(,?\"[\w]*\":null)" => "")
         end
-        Base.write(io, data)
     end
 end
 

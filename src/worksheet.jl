@@ -327,12 +327,11 @@ end
 function Base.show(io::IO, jws::JSONWorksheet)
     summary(io, jws)
     # TODO truncate based on screen size
-    x = data(jws)
     print(io, "row 1 => ")
-    print(io, JSON.json(x[1], 1))
-    if length(x) > 1
+    print(io, JSON3.pretty(jws[1]))
+    if length(jws) > 1
         print("...")
-        print(io, "row $(length(x)) => ")
-        print(io, JSON.json(x[end]))
+        print(io, "row $(length(jws)) => ")
+        print(io, JSON3.write(jws[end]))
     end
 end

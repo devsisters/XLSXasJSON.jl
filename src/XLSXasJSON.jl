@@ -1,7 +1,7 @@
 module XLSXasJSON
 
 using Printf, REPL
-using JSON
+using JSON3
 using JSONPointer
 using JSONPointer: Pointer
 using XLSX
