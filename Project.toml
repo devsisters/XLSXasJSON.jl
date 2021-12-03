@@ -12,6 +12,7 @@ REPL = "3fa0cd96-eef1-5676-8a61-b3b8758bbffb"
 XLSX = "fdbf4ff8-1666-58a4-91e7-1b58723a45e0"
 
 [compat]
+JSON3 = "1"
 JSONPointer = "0.3"
 OrderedCollections = "1"
 XLSX = "^0.5.8"
