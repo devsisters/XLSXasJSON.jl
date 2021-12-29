@@ -185,11 +185,13 @@ function Base.size(jws::JSONWorksheet, d)
 end
 Base.length(jws::JSONWorksheet) = length(data(jws))
 
-##############################################################################
+StructTypes.StructType(::JSONWorksheet) = StructTypes.ArrayType()
+
+########################################################################
 ##
 ## getindex() definitions
 ##
-##############################################################################
+########################################################################
 Base.getindex(jws::JSONWorksheet, i) = getindex(jws.data, i)
 Base.getindex(jws::JSONWorksheet, ::Colon, ::Colon) = getindex(jws, eachindex(jws.data), eachindex(jws.pointer))
 Base.getindex(jws::JSONWorksheet, row_ind, ::Colon) = getindex(jws, row_ind, eachindex(jws.pointer))

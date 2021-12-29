@@ -9,6 +9,7 @@ JSONPointer = "cc3ff66e-924d-4e6b-b111-1d9960e4bba9"
 OrderedCollections = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 REPL = "3fa0cd96-eef1-5676-8a61-b3b8758bbffb"
+StructTypes = "856f2bd8-1eba-4b0a-8007-ebc267875bd4"
 XLSX = "fdbf4ff8-1666-58a4-91e7-1b58723a45e0"
 
 [compat]
